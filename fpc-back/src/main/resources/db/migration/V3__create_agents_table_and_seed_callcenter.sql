@@ -15,7 +15,7 @@ INSERT INTO users (id, email, password_hash, role, is_active, created_at, update
 SELECT
     gen_random_uuid(),
     'callcenter@gmail.com',
-    crypt('callcenter', gen_salt('bf')),
+    '$2b$10$9Oa0ldDPSaUdYKymZpKqausQHxUDaNsUzF1gK1M4diZiux3xziPhm',
     'AGENT',
     true,
     NOW(),
