@@ -32,6 +32,11 @@ interface VolunteerAvailabilityRepository : JpaRepository<VolunteerAvailability,
     ): List<VolunteerAvailability>
 
     /**
+     * Find all availability slots for a specific volunteer.
+     */
+    fun findByVolunteerId(volunteerId: Long): List<VolunteerAvailability>
+
+    /**
      * Check if a duplicate slot exists for the same volunteer, date, and start time.
      */
     fun existsByVolunteerIdAndDateAndStartTime(

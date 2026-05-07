@@ -3,6 +3,7 @@ package com.hazardev.fpc_back.volunteer.application
 import com.hazardev.fpc_back.shared.domain.AvailabilityStatus
 import com.hazardev.fpc_back.volunteer.application.dto.AvailabilitySlotResponse
 import com.hazardev.fpc_back.volunteer.application.dto.CreateSlotRequest
+import com.hazardev.fpc_back.volunteer.application.dto.UpdateSlotRequest
 import com.hazardev.fpc_back.volunteer.domain.Volunteer
 import com.hazardev.fpc_back.volunteer.domain.VolunteerAvailability
 import com.hazardev.fpc_back.volunteer.infrastructure.VolunteerAvailabilityRepository
@@ -139,6 +140,31 @@ class VolunteerAvailabilityService(
 
         slot.status = AvailabilityStatus.AVAILABLE
         return availabilityRepository.save(slot).toResponse()
+    }
+
+    fun getSlotById(id: Long): VolunteerAvailability {
+        return availabilityRepository.findById(id)
+            .orElseThrow { EntityNotFoundException("Availability slot not found with id: $id") }
+    }
+
+    fun getAllSlotsByVolunteer(volunteerId: Long): List<VolunteerAvailability> {
+        return availabilityRepository.findByVolunteerId(volunteerId)
+    }
+
+    @Transactional
+    fun updateSlot(id: Long, request: UpdateSlotRequest): VolunteerAvailability {
+        val slot = getSlotById(id)
+        request.date?.let { slot.date = it }
+        request.startTime?.let { slot.startTime = it }
+        request.endTime?.let { slot.endTime = it }
+        request.status?.let { slot.status = it }
+        return availabilityRepository.save(slot)
+    }
+
+    @Transactional
+    fun deleteSlot(id: Long) {
+        val slot = getSlotById(id)
+        availabilityRepository.delete(slot)
     }
 
     /**
