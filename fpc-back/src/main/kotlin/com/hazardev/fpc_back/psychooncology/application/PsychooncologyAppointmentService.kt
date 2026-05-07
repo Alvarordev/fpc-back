@@ -5,6 +5,7 @@ import com.hazardev.fpc_back.patient.infrastructure.PatientRepository
 import com.hazardev.fpc_back.psychooncology.application.dto.CompleteAppointmentRequest
 import com.hazardev.fpc_back.psychooncology.application.dto.PsychooncologyAppointmentResponse
 import com.hazardev.fpc_back.psychooncology.application.dto.ScheduleAppointmentRequest
+import com.hazardev.fpc_back.psychooncology.application.dto.UpdateAppointmentRequest
 import com.hazardev.fpc_back.psychooncology.domain.PsychooncologyAppointment
 import com.hazardev.fpc_back.psychooncology.infrastructure.PsychooncologyAppointmentRepository
 import com.hazardev.fpc_back.shared.domain.AppointmentStatus
@@ -197,6 +198,98 @@ class PsychooncologyAppointmentService(
     fun getUpcomingAppointments(): List<PsychooncologyAppointmentResponse> {
         return appointmentRepository.findByStatusOrderByScheduledAtAsc(AppointmentStatus.SCHEDULED)
             .map { it.toResponse() }
+    }
+
+    /**
+     * Get a single appointment by ID.
+     *
+     * @param id the appointment ID
+     * @return the appointment entity
+     * @throws EntityNotFoundException if the appointment does not exist
+     */
+    fun getById(id: Long): PsychooncologyAppointment {
+        return appointmentRepository.findById(id)
+            .orElseThrow { EntityNotFoundException("Psychooncology appointment not found with id: $id") }
+    }
+
+    /**
+     * List all appointments.
+     *
+     * @return all appointments
+     */
+    fun listAll(): List<PsychooncologyAppointment> {
+        return appointmentRepository.findAll()
+    }
+
+    /**
+     * Update an existing appointment's fields.
+     *
+     * Only non-null fields in the request will be applied. For relationship fields
+     * (patientId, volunteerId, contactId, availabilityId), the referenced entity
+     * is validated to exist before updating.
+     *
+     * @param id the appointment ID
+     * @param request containing the fields to update (all optional)
+     * @return the updated appointment entity
+     * @throws EntityNotFoundException if the appointment or any referenced entity does not exist
+     */
+    @Transactional
+    fun updateAppointment(id: Long, request: UpdateAppointmentRequest): PsychooncologyAppointment {
+        val appointment = getById(id)
+
+        request.patientId?.let { patientId ->
+            val patient = patientRepository.findById(patientId)
+                .orElseThrow { EntityNotFoundException("Patient not found with id: $patientId") }
+            appointment.patient = patient
+        }
+        request.volunteerId?.let { volunteerId ->
+            val volunteer = volunteerRepository.findById(volunteerId)
+                .orElseThrow { EntityNotFoundException("Volunteer not found with id: $volunteerId") }
+            appointment.volunteer = volunteer
+        }
+        request.contactId?.let { contactId ->
+            val contact = contactRepository.findById(contactId)
+                .orElseThrow { EntityNotFoundException("Contact not found with id: $contactId") }
+            appointment.contact = contact
+        }
+        request.availabilityId?.let { availabilityId ->
+            val availability = volunteerAvailabilityRepository.findById(availabilityId)
+                .orElseThrow { EntityNotFoundException("Availability slot not found with id: $availabilityId") }
+            appointment.availability = availability
+        }
+        request.patientEmail?.let { appointment.patientEmail = it }
+        request.sessionNumber?.let { appointment.sessionNumber = it }
+        request.isAdditionalSession?.let { appointment.isAdditionalSession = it }
+        request.modality?.let { appointment.modality = it }
+        request.status?.let { appointment.status = it }
+        request.scheduledAt?.let { appointment.scheduledAt = it }
+        request.completedAt?.let { appointment.completedAt = it }
+        request.topicAddressed?.let { appointment.topicAddressed = it }
+        request.sessionDetails?.let { appointment.sessionDetails = it }
+        request.additionalObservations?.let { appointment.additionalObservations = it }
+        request.recommendations?.let { appointment.recommendations = it }
+        request.referral?.let { appointment.referral = it }
+
+        return appointmentRepository.save(appointment)
+    }
+
+    /**
+     * Delete an appointment.
+     *
+     * If the appointment is still in SCHEDULED status, the associated
+     * availability slot is released back to AVAILABLE before deletion.
+     *
+     * @param id the appointment ID
+     * @throws EntityNotFoundException if the appointment does not exist
+     */
+    @Transactional
+    fun deleteAppointment(id: Long) {
+        val appointment = getById(id)
+        // If SCHEDULED, also release the availability slot (same logic as cancelAppointment)
+        if (appointment.status == AppointmentStatus.SCHEDULED) {
+            volunteerAvailabilityService.releaseSlot(appointment.availability.id!!)
+        }
+        appointmentRepository.delete(appointment)
     }
 
     /**

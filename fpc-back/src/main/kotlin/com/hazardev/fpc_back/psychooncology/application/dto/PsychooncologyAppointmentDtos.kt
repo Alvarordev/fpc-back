@@ -34,6 +34,29 @@ data class CompleteAppointmentRequest(
 )
 
 /**
+ * Request to update an existing psycho-oncology appointment.
+ * All fields are optional — only provided fields will be modified.
+ */
+data class UpdateAppointmentRequest(
+    val patientId: Long? = null,
+    val volunteerId: Long? = null,
+    val contactId: Long? = null,
+    val availabilityId: Long? = null,
+    val patientEmail: String? = null,
+    val sessionNumber: Int? = null,
+    val isAdditionalSession: Boolean? = null,
+    val modality: AppointmentModality? = null,
+    val status: AppointmentStatus? = null,
+    val scheduledAt: LocalDateTime? = null,
+    val completedAt: LocalDateTime? = null,
+    val topicAddressed: String? = null,
+    val sessionDetails: String? = null,
+    val additionalObservations: String? = null,
+    val recommendations: String? = null,
+    val referral: ReferralType? = null
+)
+
+/**
  * Full response representation of a psycho-oncology appointment.
  */
 data class PsychooncologyAppointmentResponse(
