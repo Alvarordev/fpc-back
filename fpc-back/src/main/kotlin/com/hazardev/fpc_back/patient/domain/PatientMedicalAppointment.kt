@@ -1,6 +1,7 @@
 package com.hazardev.fpc_back.patient.domain
 
 import com.hazardev.fpc_back.contact.domain.Contact
+import com.hazardev.fpc_back.healthcenter.domain.HealthCenter
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
@@ -29,8 +30,9 @@ class PatientMedicalAppointment(
     @JoinColumn(name = "contact_id", nullable = false)
     var contact: Contact,
 
-    @Column(name = "health_establishment", nullable = true)
-    var healthEstablishment: String? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "health_center_id", nullable = true)
+    var healthCenter: HealthCenter? = null,
 
     @Column(nullable = true)
     var specialty: String? = null,

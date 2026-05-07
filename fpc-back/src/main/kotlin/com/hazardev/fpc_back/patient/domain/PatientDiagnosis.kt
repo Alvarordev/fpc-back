@@ -1,6 +1,7 @@
 package com.hazardev.fpc_back.patient.domain
 
 import com.hazardev.fpc_back.contact.domain.Contact
+import com.hazardev.fpc_back.healthcenter.domain.HealthCenter
 import com.hazardev.fpc_back.shared.domain.CancerStage
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -42,8 +43,9 @@ class PatientDiagnosis(
     @Column(name = "diagnosis_date", nullable = true)
     var diagnosisDate: LocalDate? = null,
 
-    @Column(name = "diagnosis_location", nullable = true)
-    var diagnosisLocation: String? = null,
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "health_center_id", nullable = true)
+    var healthCenter: HealthCenter? = null,
 
     @Column(name = "diagnosis_specialty", nullable = true)
     var diagnosisSpecialty: String? = null,
