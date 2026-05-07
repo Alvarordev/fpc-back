@@ -109,6 +109,24 @@ data class EnrollPatientRequest(
 )
 
 /**
+ * Request with PatientDetails fields for full enrollment flow.
+ * Mirrors [EnrollPatientRequest] but used as a sub-object of [FullEnrollmentRequest].
+ */
+data class EnrollPatientDetailsRequest(
+    val birthDepartment: String? = null,
+    val currentAddress: String? = null,
+    val currentDistrict: String? = null,
+    val currentDepartment: String? = null,
+    val dniMatchesAddress: Boolean? = null,
+    val travelTimeToHospital: String? = null,
+    val emergencyContactName: String? = null,
+    val emergencyContactPhone: String? = null,
+    val educationLevel: EducationLevel? = null,
+    val nativeLanguage: String? = null,
+    val requiresTranslation: Boolean = false
+)
+
+/**
  * Request to update existing patient details.
  * All fields are optional.
  */
@@ -356,4 +374,40 @@ data class ContactResponse(
     val completedAt: LocalDateTime?,
     val notes: String?,
     val createdAt: LocalDateTime
+)
+
+// ═══════════════════════════════════════════════════════════
+// Full Enrollment DTO
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Composite request for atomically creating/enrolling a patient
+ * in a single transaction. All sub-entities (details, insurance,
+ * diagnosis, treatment, appointments, SIS, companions) are
+ * processed together.
+ *
+ * @property patientId If provided, enrolls an existing patient;
+ *                     if null, a new patient is created from [patientData]
+ * @property patientData Required when [patientId] is null
+ * @property details PatientDetails — required for enrollment
+ * @property insurance Optional insurance record
+ * @property diagnosis Optional diagnosis record
+ * @property treatment Optional treatment record (requires diagnosis)
+ * @property medicalAppointments Optional list of appointments
+ * @property sisAffiliation Optional SIS affiliation (processed only when
+ *                          no real insurance exists)
+ * @property companions Optional list of companions to link
+ * @property contactId The contact that initiated this enrollment
+ */
+data class FullEnrollmentRequest(
+    val patientId: Long?,
+    val patientData: CreatePatientRequest?,
+    val details: EnrollPatientDetailsRequest?,
+    val insurance: AddInsuranceRequest?,
+    val diagnosis: AddDiagnosisRequest?,
+    val treatment: AddTreatmentRequest?,
+    val medicalAppointments: List<AddMedicalAppointmentRequest>?,
+    val sisAffiliation: AddSisAffiliationRequest?,
+    val companions: List<LinkCompanionRequest>?,
+    val contactId: Long?
 )

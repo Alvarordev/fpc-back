@@ -12,6 +12,7 @@ import com.hazardev.fpc_back.patient.application.dto.ContactResponse
 import com.hazardev.fpc_back.patient.application.dto.CreatePatientRequest
 import com.hazardev.fpc_back.patient.application.dto.DiagnosisRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.EnrollPatientRequest
+import com.hazardev.fpc_back.patient.application.dto.FullEnrollmentRequest
 import com.hazardev.fpc_back.patient.application.dto.InsuranceRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.LinkCompanionRequest
 import com.hazardev.fpc_back.patient.application.dto.MedicalAppointmentResponse
@@ -22,6 +23,7 @@ import com.hazardev.fpc_back.patient.application.dto.UpdatePatientDetailsRequest
 import com.hazardev.fpc_back.patient.application.dto.UpdatePatientRequest
 import com.hazardev.fpc_back.shared.domain.PatientRole
 import com.hazardev.fpc_back.shared.domain.PatientStatus
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -91,6 +93,18 @@ class PatientController(
         @RequestBody request: ChangeStatusRequest
     ): PatientResponse {
         return patientService.changePatientStatus(id, request.newStatus)
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Full Enrollment
+    // ═══════════════════════════════════════════════════════
+
+    @PostMapping("/enroll")
+    fun fullEnrollment(
+        @Valid @RequestBody request: FullEnrollmentRequest
+    ): ResponseEntity<PatientResponse> {
+        val response = patientService.fullEnrollment(request)
+        return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
     // ═══════════════════════════════════════════════════════

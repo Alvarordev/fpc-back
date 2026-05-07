@@ -14,7 +14,9 @@ import com.hazardev.fpc_back.patient.application.dto.ContactSummary
 import com.hazardev.fpc_back.patient.application.dto.CreatePatientRequest
 import com.hazardev.fpc_back.patient.application.dto.DiagnosisRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.DiagnosisSummary
+import com.hazardev.fpc_back.patient.application.dto.EnrollPatientDetailsRequest
 import com.hazardev.fpc_back.patient.application.dto.EnrollPatientRequest
+import com.hazardev.fpc_back.patient.application.dto.FullEnrollmentRequest
 import com.hazardev.fpc_back.patient.application.dto.InsuranceRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.MedicalAppointmentResponse
 import com.hazardev.fpc_back.patient.application.dto.PatientDetailsResponse
@@ -39,6 +41,7 @@ import com.hazardev.fpc_back.patient.infrastructure.PatientMedicalAppointmentRep
 import com.hazardev.fpc_back.patient.infrastructure.PatientRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientSisAffiliationRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientTreatmentRepository
+import com.hazardev.fpc_back.shared.domain.InsuranceType
 import com.hazardev.fpc_back.shared.domain.PatientRole
 import com.hazardev.fpc_back.shared.domain.PatientStatus
 import jakarta.persistence.EntityNotFoundException
@@ -91,25 +94,7 @@ class PatientService(
      * @throws IllegalArgumentException if the DNI is already registered
      */
     fun createPatient(request: CreatePatientRequest): PatientResponse {
-        request.dni?.let { dni ->
-            if (patientRepository.findByDni(dni) != null) {
-                throw IllegalArgumentException(
-                    "A patient with DNI '$dni' already exists. DNI must be unique."
-                )
-            }
-        }
-
-        val patient = Patient(
-            fullName = request.fullName,
-            dni = request.dni,
-            birthDate = request.birthDate,
-            primaryPhone = request.primaryPhone,
-            secondaryPhone = request.secondaryPhone,
-            hasWhatsapp = request.hasWhatsapp,
-            role = request.role,
-            status = request.status ?: PatientStatus.PROSPECT
-        )
-
+        val patient = createPatientEntity(request)
         return patientRepository.save(patient).let { saved ->
             buildPatientResponse(saved)
         }
@@ -757,6 +742,123 @@ class PatientService(
     }
 
     // ═══════════════════════════════════════════════════════
+    // Full Enrollment
+    // ═══════════════════════════════════════════════════════
+
+    /**
+     * Atomically create or enroll a patient with all related data in one transaction.
+     *
+     * Supports two modes:
+     * - **Create mode** (patientId is null): creates a new patient from [request.patientData],
+     *   then enrolls them with details, insurance, diagnosis, etc.
+     * - **Update mode** (patientId is provided): fetches the existing patient, optionally
+     *   updates basic info from [request.patientData], then processes all sub-entities.
+     *
+     * After successful processing, the patient's status is set to [PatientStatus.ENROLLED].
+     *
+     * Business rules enforced:
+     * - [request.details] is required (enrollment needs PatientDetails)
+     * - [request.patientData] is required when [request.patientId] is null
+     * - DNI uniqueness validated on creation and on update (if DNI changes)
+     * - SIS affiliation is only processed when there is no valid insurance
+     *   (insurance is null or type is [InsuranceType.NONE])
+     * - All sub-entity creation respects existing rules (isCurrent management,
+     *   entity existence, companion role validation, etc.)
+     *
+     * @param request the composite enrollment payload
+     * @return the complete patient response with all related data
+     * @throws IllegalArgumentException if patientData is missing for new patients
+     * @throws IllegalArgumentException if DNI is already in use
+     * @throws EntityNotFoundException if a referenced entity does not exist
+     */
+    fun fullEnrollment(request: FullEnrollmentRequest): PatientResponse {
+        require(request.details != null) {
+            "details is required for enrollment"
+        }
+
+        // 1. Get or create patient
+        val patient = if (request.patientId != null) {
+            val p = findPatientOrThrow(request.patientId)
+
+            if (request.patientData != null) {
+                // Validate DNI uniqueness if changed
+                request.patientData.dni?.let { newDni ->
+                    if (newDni != p.dni) {
+                        val existing = patientRepository.findByDni(newDni)
+                        if (existing != null && existing.id != p.id) {
+                            throw IllegalArgumentException(
+                                "A patient with DNI '$newDni' already exists. DNI must be unique."
+                            )
+                        }
+                    }
+                }
+
+                p.fullName = request.patientData.fullName
+                p.dni = request.patientData.dni
+                p.birthDate = request.patientData.birthDate
+                p.primaryPhone = request.patientData.primaryPhone
+                p.secondaryPhone = request.patientData.secondaryPhone
+                p.hasWhatsapp = request.patientData.hasWhatsapp
+                p.role = request.patientData.role
+            }
+            patientRepository.save(p)
+        } else {
+            require(request.patientData != null) {
+                "patientData is required when patientId is null"
+            }
+            patientRepository.save(createPatientEntity(request.patientData))
+        }
+
+        val patientId = patient.id!!
+
+        // 2. Create or update PatientDetails (required for enrollment)
+        createOrUpdateDetails(patient, request.details)
+
+        // 3. Insurance
+        if (request.insurance != null) {
+            addInsurance(patientId, request.insurance)
+        }
+
+        // 4. Diagnosis
+        if (request.diagnosis != null) {
+            addDiagnosis(patientId, request.diagnosis)
+        }
+
+        // 5. Treatment
+        if (request.treatment != null) {
+            addTreatment(patientId, request.treatment)
+        }
+
+        // 6. Medical Appointments
+        request.medicalAppointments?.forEach { appointment ->
+            addMedicalAppointment(patientId, appointment)
+        }
+
+        // 7. SIS Affiliation (only if no real insurance)
+        val hasNoRealInsurance = request.insurance == null ||
+            request.insurance.insuranceType == InsuranceType.NONE
+        if (hasNoRealInsurance && request.sisAffiliation != null) {
+            addSisAffiliation(patientId, request.sisAffiliation)
+        }
+
+        // 8. Companions
+        request.companions?.forEach { companion ->
+            linkCompanion(
+                patientId = patientId,
+                companionId = companion.companionId,
+                isPrimaryInformant = companion.isPrimaryInformant
+            )
+        }
+
+        // 9. Set status to ENROLLED
+        patient.status = PatientStatus.ENROLLED
+        patientRepository.save(patient)
+
+        // 10. Return complete patient
+        return getPatient(patientId)
+    }
+
+    // ═══════════════════════════════════════════════════════
     // Contact History
     // ═══════════════════════════════════════════════════════
 
@@ -775,6 +877,83 @@ class PatientService(
     // ═══════════════════════════════════════════════════════
     // Private Helpers
     // ═══════════════════════════════════════════════════════
+
+    /**
+     * Build a [Patient] entity from a [CreatePatientRequest] without persisting it.
+     *
+     * Validates DNI uniqueness. The caller is responsible for saving the entity.
+     *
+     * @param request the patient creation data
+     * @return the constructed (unsaved) Patient entity
+     * @throws IllegalArgumentException if the DNI is already registered
+     */
+    private fun createPatientEntity(request: CreatePatientRequest): Patient {
+        request.dni?.let { dni ->
+            if (patientRepository.findByDni(dni) != null) {
+                throw IllegalArgumentException(
+                    "A patient with DNI '$dni' already exists. DNI must be unique."
+                )
+            }
+        }
+
+        return Patient(
+            fullName = request.fullName,
+            dni = request.dni,
+            birthDate = request.birthDate,
+            primaryPhone = request.primaryPhone,
+            secondaryPhone = request.secondaryPhone,
+            hasWhatsapp = request.hasWhatsapp,
+            role = request.role,
+            status = request.status ?: PatientStatus.PROSPECT
+        )
+    }
+
+    /**
+     * Create or update PatientDetails for a patient.
+     *
+     * If details already exist, non-null fields from [request] are applied
+     * (update semantics). If no details exist, a new record is created.
+     *
+     * @param patient the managed patient entity
+     * @param request the details data
+     */
+    private fun createOrUpdateDetails(patient: Patient, request: EnrollPatientDetailsRequest) {
+        val existingDetails = patientDetailsRepository.findByPatientId(patient.id!!)
+
+        if (existingDetails != null) {
+            request.apply {
+                birthDepartment?.let { existingDetails.birthDepartment = it }
+                currentAddress?.let { existingDetails.currentAddress = it }
+                currentDistrict?.let { existingDetails.currentDistrict = it }
+                currentDepartment?.let { existingDetails.currentDepartment = it }
+                dniMatchesAddress?.let { existingDetails.dniMatchesAddress = it }
+                travelTimeToHospital?.let { existingDetails.travelTimeToHospital = it }
+                emergencyContactName?.let { existingDetails.emergencyContactName = it }
+                emergencyContactPhone?.let { existingDetails.emergencyContactPhone = it }
+                educationLevel?.let { existingDetails.educationLevel = it }
+                nativeLanguage?.let { existingDetails.nativeLanguage = it }
+                // requiresTranslation is non-nullable, always apply
+                existingDetails.requiresTranslation = requiresTranslation
+            }
+            patientDetailsRepository.save(existingDetails)
+        } else {
+            val details = PatientDetails(
+                patient = patient,
+                birthDepartment = request.birthDepartment,
+                currentAddress = request.currentAddress,
+                currentDistrict = request.currentDistrict,
+                currentDepartment = request.currentDepartment,
+                dniMatchesAddress = request.dniMatchesAddress,
+                travelTimeToHospital = request.travelTimeToHospital,
+                emergencyContactName = request.emergencyContactName,
+                emergencyContactPhone = request.emergencyContactPhone,
+                educationLevel = request.educationLevel,
+                nativeLanguage = request.nativeLanguage,
+                requiresTranslation = request.requiresTranslation
+            )
+            patientDetailsRepository.save(details)
+        }
+    }
 
     /**
      * Find a patient by ID or throw a descriptive exception.
