@@ -5,4 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 
 @Repository
-interface PatientDetailsRepository : JpaRepository<PatientDetails, Long>
+interface PatientDetailsRepository : JpaRepository<PatientDetails, Long> {
+
+    fun findByPatientId(patientId: Long): PatientDetails?
+}

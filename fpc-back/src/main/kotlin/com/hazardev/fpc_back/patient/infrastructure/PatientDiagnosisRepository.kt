@@ -5,4 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
 
 @Repository
-interface PatientDiagnosisRepository : JpaRepository<PatientDiagnosis, Long>
+interface PatientDiagnosisRepository : JpaRepository<PatientDiagnosis, Long> {
+
+    fun findByPatientIdOrderByCreatedAtDesc(patientId: Long): List<PatientDiagnosis>
+
+    fun findByPatientIdAndIsCurrentTrue(patientId: Long): List<PatientDiagnosis>
+}

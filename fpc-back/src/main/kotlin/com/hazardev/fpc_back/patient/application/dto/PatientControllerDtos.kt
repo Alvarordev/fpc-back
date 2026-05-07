@@ -1,0 +1,17 @@
+package com.hazardev.fpc_back.patient.application.dto
+
+import com.hazardev.fpc_back.shared.domain.PatientStatus
+
+/**
+ * Request DTOs specifically for the PatientController layer.
+ * These are simple wrappers that don't belong to the service-layer DTOs.
+ */
+
+data class ChangeStatusRequest(
+    val newStatus: PatientStatus
+)
+
+data class LinkCompanionRequest(
+    val companionId: Long,
+    val isPrimaryInformant: Boolean = false
+)
