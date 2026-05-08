@@ -6,5 +6,6 @@ data class CreateAlertRequest(
     val healthCenterId: UUID,
     val contactId: UUID,
     val createdByAgentId: UUID,
+    val title: String,
     val description: String
 )

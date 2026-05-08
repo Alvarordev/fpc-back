@@ -40,6 +40,9 @@ class Alert(
     var createdBy: Agent,
 
     @Column(nullable = false)
+    var title: String,
+
+    @Column(nullable = false)
     var description: String,
 
     @Enumerated(EnumType.STRING)

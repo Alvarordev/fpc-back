@@ -73,6 +73,7 @@ class AlertService(
             healthCenter = healthCenter,
             contact = contact,
             createdBy = agent,
+            title = request.title,
             description = request.description,
             status = AlertStatus.ACTIVE
         )
@@ -151,6 +152,7 @@ class AlertService(
         contactId = contact.id!!,
         createdByAgentId = createdBy.id!!,
         createdByAgentName = createdBy.fullName,
+        title = title,
         description = description,
         status = status,
         resolvedAt = resolvedAt,
@@ -176,6 +178,8 @@ class AlertService(
             .orElseThrow { EntityNotFoundException("Alert not found with id: $id") }
 
         request.description?.let { alert.description = it }
+
+        request.title?.let { alert.title = it }
 
         request.healthCenterId?.let { healthCenterId ->
             val healthCenter = healthCenterRepository.findById(healthCenterId)

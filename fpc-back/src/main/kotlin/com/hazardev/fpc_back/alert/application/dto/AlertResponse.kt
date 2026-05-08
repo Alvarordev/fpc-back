@@ -11,6 +11,7 @@ data class AlertResponse(
     val contactId: UUID,
     val createdByAgentId: UUID,
     val createdByAgentName: String,
+    val title: String,
     val description: String,
     val status: AlertStatus,
     val resolvedAt: LocalDateTime?,
