@@ -1,8 +1,9 @@
 package com.hazardev.fpc_back.user.application
 
 import com.hazardev.fpc_back.shared.security.JwtTokenProvider
+import com.hazardev.fpc_back.user.application.dto.AuthResponse
 import com.hazardev.fpc_back.user.application.dto.RefreshRequest
-import com.hazardev.fpc_back.user.application.dto.TokenResponse
+import com.hazardev.fpc_back.user.application.dto.UserResponse
 import com.hazardev.fpc_back.user.infrastructure.UserRepository
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.core.userdetails.UsernameNotFoundException
@@ -17,7 +18,7 @@ class AuthService(
     private val jwtTokenProvider: JwtTokenProvider
 ) {
 
-    fun login(email: String, password: String): TokenResponse {
+    fun login(email: String, password: String): AuthResponse {
         val user = userRepository.findByEmail(email)
             ?: throw BadCredentialsException("Invalid credentials")
 
@@ -33,10 +34,21 @@ class AuthService(
         val accessToken = jwtTokenProvider.generateAccessToken(userId, user.email, user.role)
         val refreshToken = jwtTokenProvider.generateRefreshToken(userId)
 
-        return TokenResponse(accessToken = accessToken, refreshToken = refreshToken)
+        return AuthResponse(
+            accessToken = accessToken,
+            refreshToken = refreshToken,
+            user = UserResponse(
+                id = userId,
+                email = user.email,
+                role = user.role,
+                isActive = user.isActive,
+                createdAt = user.createdAt,
+                updatedAt = user.updatedAt
+            )
+        )
     }
 
-    fun refresh(refreshToken: String): TokenResponse {
+    fun refresh(refreshToken: String): AuthResponse {
         if (!jwtTokenProvider.validateToken(refreshToken)) {
             throw BadCredentialsException("Invalid refresh token")
         }
@@ -54,6 +66,17 @@ class AuthService(
         val accessToken = jwtTokenProvider.generateAccessToken(refreshedUserId, user.email, user.role)
         val newRefreshToken = jwtTokenProvider.generateRefreshToken(refreshedUserId)
 
-        return TokenResponse(accessToken = accessToken, refreshToken = newRefreshToken)
+        return AuthResponse(
+            accessToken = accessToken,
+            refreshToken = newRefreshToken,
+            user = UserResponse(
+                id = refreshedUserId,
+                email = user.email,
+                role = user.role,
+                isActive = user.isActive,
+                createdAt = user.createdAt,
+                updatedAt = user.updatedAt
+            )
+        )
     }
 }

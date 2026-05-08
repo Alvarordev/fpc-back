@@ -13,10 +13,10 @@ data class RefreshRequest(
     val refreshToken: String
 )
 
-data class TokenResponse(
+data class AuthResponse(
     val accessToken: String,
     val refreshToken: String,
-    val tokenType: String = "Bearer"
+    val user: UserResponse
 )
 
 data class CreateUserRequest(

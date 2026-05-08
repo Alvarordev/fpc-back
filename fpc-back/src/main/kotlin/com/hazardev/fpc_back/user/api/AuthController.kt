@@ -3,7 +3,7 @@ package com.hazardev.fpc_back.user.api
 import com.hazardev.fpc_back.user.application.AuthService
 import com.hazardev.fpc_back.user.application.dto.LoginRequest
 import com.hazardev.fpc_back.user.application.dto.RefreshRequest
-import com.hazardev.fpc_back.user.application.dto.TokenResponse
+import com.hazardev.fpc_back.user.application.dto.AuthResponse
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -16,12 +16,12 @@ class AuthController(
 ) {
 
     @PostMapping("/login")
-    fun login(@RequestBody request: LoginRequest): TokenResponse {
+    fun login(@RequestBody request: LoginRequest): AuthResponse {
         return authService.login(request.email, request.password)
     }
 
     @PostMapping("/refresh")
-    fun refresh(@RequestBody request: RefreshRequest): TokenResponse {
+    fun refresh(@RequestBody request: RefreshRequest): AuthResponse {
         return authService.refresh(request.refreshToken)
     }
 }
