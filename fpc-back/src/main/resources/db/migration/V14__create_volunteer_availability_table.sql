@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS volunteer_availability (
-    id BIGSERIAL PRIMARY KEY,
-    volunteer_id BIGINT NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    volunteer_id UUID NOT NULL,
     date DATE NOT NULL,
     start_time TIME NOT NULL,
     end_time TIME NOT NULL,

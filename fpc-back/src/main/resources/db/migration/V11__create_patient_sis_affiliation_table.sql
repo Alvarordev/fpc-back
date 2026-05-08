@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS patient_sis_affiliation (
-    id BIGSERIAL PRIMARY KEY,
-    patient_id BIGINT NOT NULL,
-    contact_id BIGINT NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL,
+    contact_id UUID NOT NULL,
     can_affiliate BOOLEAN NOT NULL,
     expected_date DATE,
     cant_affiliate_reason TEXT,

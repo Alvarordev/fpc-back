@@ -7,9 +7,9 @@ import org.springframework.stereotype.Repository
 import java.util.UUID
 
 @Repository
-interface AlertRepository : JpaRepository<Alert, Long> {
+interface AlertRepository : JpaRepository<Alert, UUID> {
 
-    fun findByHealthCenterId(healthCenterId: Long): List<Alert>
+    fun findByHealthCenterId(healthCenterId: UUID): List<Alert>
 
     fun findByStatus(status: AlertStatus): List<Alert>
 

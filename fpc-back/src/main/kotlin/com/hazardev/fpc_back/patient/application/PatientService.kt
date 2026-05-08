@@ -48,6 +48,7 @@ import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
+import java.util.UUID
 
 /**
  * Centralized service for managing Patient entities and all their related sub-entities.
@@ -79,10 +80,6 @@ class PatientService(
     private val healthCenterRepository: HealthCenterRepository
 ) {
 
-    // ═══════════════════════════════════════════════════════
-    // Core Patient CRUD
-    // ═══════════════════════════════════════════════════════
-
     /**
      * Create a new patient as a prospect.
      *
@@ -112,7 +109,7 @@ class PatientService(
      * @throws EntityNotFoundException if the patient does not exist
      */
     @Transactional(readOnly = true)
-    fun getPatient(patientId: Long): PatientResponse {
+    fun getPatient(patientId: UUID): PatientResponse {
         val patient = findPatientOrThrow(patientId)
         return buildPatientResponse(patient)
     }
@@ -161,7 +158,7 @@ class PatientService(
      * @throws EntityNotFoundException if the patient does not exist
      * @throws IllegalArgumentException if the updated DNI is already in use
      */
-    fun updatePatient(patientId: Long, request: UpdatePatientRequest): PatientResponse {
+    fun updatePatient(patientId: UUID, request: UpdatePatientRequest): PatientResponse {
         val patient = findPatientOrThrow(patientId)
 
         request.dni?.let { newDni ->
@@ -200,7 +197,7 @@ class PatientService(
      * @return the updated patient response
      * @throws EntityNotFoundException if the patient does not exist
      */
-    fun changePatientStatus(patientId: Long, newStatus: PatientStatus): PatientResponse {
+    fun changePatientStatus(patientId: UUID, newStatus: PatientStatus): PatientResponse {
         val patient = findPatientOrThrow(patientId)
 
         val current = patient.status
@@ -208,7 +205,6 @@ class PatientService(
             return buildPatientResponse(patient)
         }
 
-        // Validate transition
         val allowed = when (current) {
             PatientStatus.PROSPECT ->
                 newStatus in setOf(PatientStatus.ENROLLED, PatientStatus.INACTIVE)
@@ -240,15 +236,11 @@ class PatientService(
      * @param patientId the patient ID
      * @throws EntityNotFoundException if the patient does not exist
      */
-    fun deletePatient(patientId: Long) {
+    fun deletePatient(patientId: UUID) {
         val patient = findPatientOrThrow(patientId)
         patient.status = PatientStatus.INACTIVE
         patientRepository.save(patient)
     }
-
-    // ═══════════════════════════════════════════════════════
-    // Patient Details
-    // ═══════════════════════════════════════════════════════
 
     /**
      * Enroll a patient by creating their detailed record.
@@ -262,7 +254,7 @@ class PatientService(
      * @throws EntityNotFoundException if the patient does not exist
      * @throws IllegalStateException if the patient is not in PROSPECT status
      */
-    fun enrollPatient(patientId: Long, request: EnrollPatientRequest): PatientResponse {
+    fun enrollPatient(patientId: UUID, request: EnrollPatientRequest): PatientResponse {
         val patient = findPatientOrThrow(patientId)
 
         if (patient.status != PatientStatus.PROSPECT) {
@@ -289,7 +281,6 @@ class PatientService(
 
         patientDetailsRepository.save(details)
 
-        // Transition status to ENROLLED
         patient.status = PatientStatus.ENROLLED
         patientRepository.save(patient)
 
@@ -307,7 +298,7 @@ class PatientService(
      * @throws EntityNotFoundException if the patient does not exist or has no details record
      */
     fun updatePatientDetails(
-        patientId: Long,
+        patientId: UUID,
         request: UpdatePatientDetailsRequest
     ): PatientResponse {
         val patient = findPatientOrThrow(patientId)
@@ -335,10 +326,6 @@ class PatientService(
         return buildPatientResponse(patient)
     }
 
-    // ═══════════════════════════════════════════════════════
-    // Insurance
-    // ═══════════════════════════════════════════════════════
-
     /**
      * Add a new insurance record for a patient (history-only, never updates).
      *
@@ -350,11 +337,10 @@ class PatientService(
      * @return the complete patient response
      * @throws EntityNotFoundException if the patient or contact does not exist
      */
-    fun addInsurance(patientId: Long, request: AddInsuranceRequest): PatientResponse {
+    fun addInsurance(patientId: UUID, request: AddInsuranceRequest): PatientResponse {
         val patient = findPatientOrThrow(patientId)
         val contact = findContactOrThrow(request.contactId)
 
-        // If marked as current, set all previous to not current
         if (request.isCurrent) {
             patientInsuranceRepository.findByPatientIdAndIsCurrentTrue(patientId)
                 .forEach { it.isCurrent = false }
@@ -382,14 +368,10 @@ class PatientService(
      * @return list of insurance records ordered by creation time (descending)
      */
     @Transactional(readOnly = true)
-    fun getInsuranceHistory(patientId: Long): List<InsuranceRecordResponse> {
+    fun getInsuranceHistory(patientId: UUID): List<InsuranceRecordResponse> {
         return patientInsuranceRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
             .map { it.toResponse() }
     }
-
-    // ═══════════════════════════════════════════════════════
-    // Diagnosis
-    // ═══════════════════════════════════════════════════════
 
     /**
      * Add a new diagnosis record for a patient (history-only, never updates).
@@ -402,7 +384,7 @@ class PatientService(
      * @return the complete patient response
      * @throws EntityNotFoundException if the patient, contact, or health center does not exist
      */
-    fun addDiagnosis(patientId: Long, request: AddDiagnosisRequest): PatientResponse {
+    fun addDiagnosis(patientId: UUID, request: AddDiagnosisRequest): PatientResponse {
         val patient = findPatientOrThrow(patientId)
         val contact = findContactOrThrow(request.contactId)
 
@@ -411,7 +393,6 @@ class PatientService(
                 .orElseThrow { EntityNotFoundException("HealthCenter not found with id: $id") }
         }
 
-        // If marked as current, set all previous to not current
         if (request.isCurrent) {
             patientDiagnosisRepository.findByPatientIdAndIsCurrentTrue(patientId)
                 .forEach { it.isCurrent = false }
@@ -443,14 +424,10 @@ class PatientService(
      * @return list of diagnosis records ordered by creation time (descending)
      */
     @Transactional(readOnly = true)
-    fun getDiagnosisHistory(patientId: Long): List<DiagnosisRecordResponse> {
+    fun getDiagnosisHistory(patientId: UUID): List<DiagnosisRecordResponse> {
         return patientDiagnosisRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
             .map { it.toResponse() }
     }
-
-    // ═══════════════════════════════════════════════════════
-    // Treatment
-    // ═══════════════════════════════════════════════════════
 
     /**
      * Add a new treatment record linked to a diagnosis (history-only, never updates).
@@ -463,15 +440,13 @@ class PatientService(
      * @return the complete patient response
      * @throws EntityNotFoundException if any referenced entity does not exist
      */
-    fun addTreatment(patientId: Long, request: AddTreatmentRequest): PatientResponse {
+    fun addTreatment(patientId: UUID, request: AddTreatmentRequest): PatientResponse {
         val patient = findPatientOrThrow(patientId)
         val contact = findContactOrThrow(request.contactId)
         val diagnosis = patientDiagnosisRepository.findById(request.diagnosisId)
             .orElseThrow {
                 EntityNotFoundException("PatientDiagnosis not found with id: ${request.diagnosisId}")
             }
-
-        // Verify the diagnosis belongs to this patient
         if (diagnosis.patient.id != patientId) {
             throw IllegalArgumentException(
                 "Diagnosis ${request.diagnosisId} does not belong to patient $patientId"
@@ -483,7 +458,6 @@ class PatientService(
                 .orElseThrow { EntityNotFoundException("HealthCenter not found with id: $id") }
         }
 
-        // If marked as current, set all previous treatments for this patient to not current
         if (request.isCurrent) {
             patientTreatmentRepository.findByPatientIdAndIsCurrentTrue(patientId)
                 .forEach { it.isCurrent = false }
@@ -514,14 +488,10 @@ class PatientService(
      * @return list of treatment records ordered by creation time (descending)
      */
     @Transactional(readOnly = true)
-    fun getTreatmentHistory(patientId: Long): List<TreatmentRecordResponse> {
+    fun getTreatmentHistory(patientId: UUID): List<TreatmentRecordResponse> {
         return patientTreatmentRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
             .map { it.toResponse() }
     }
-
-    // ═══════════════════════════════════════════════════════
-    // Medical Appointments
-    // ═══════════════════════════════════════════════════════
 
     /**
      * Add a medical appointment record for a patient.
@@ -532,7 +502,7 @@ class PatientService(
      * @throws EntityNotFoundException if the patient, contact, or health center does not exist
      */
     fun addMedicalAppointment(
-        patientId: Long,
+        patientId: UUID,
         request: AddMedicalAppointmentRequest
     ): PatientResponse {
         val patient = findPatientOrThrow(patientId)
@@ -566,14 +536,10 @@ class PatientService(
      * @return list of appointment records ordered by creation time (descending)
      */
     @Transactional(readOnly = true)
-    fun getMedicalAppointmentHistory(patientId: Long): List<MedicalAppointmentResponse> {
+    fun getMedicalAppointmentHistory(patientId: UUID): List<MedicalAppointmentResponse> {
         return patientMedicalAppointmentRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
             .map { it.toResponse() }
     }
-
-    // ═══════════════════════════════════════════════════════
-    // SIS Affiliation
-    // ═══════════════════════════════════════════════════════
 
     /**
      * Add a SIS affiliation attempt record for a patient.
@@ -583,7 +549,7 @@ class PatientService(
      * @return the complete patient response
      * @throws EntityNotFoundException if the patient or contact does not exist
      */
-    fun addSisAffiliation(patientId: Long, request: AddSisAffiliationRequest): PatientResponse {
+    fun addSisAffiliation(patientId: UUID, request: AddSisAffiliationRequest): PatientResponse {
         val patient = findPatientOrThrow(patientId)
         val contact = findContactOrThrow(request.contactId)
 
@@ -608,7 +574,7 @@ class PatientService(
      * @throws EntityNotFoundException if the patient or SIS record does not exist
      * @throws IllegalArgumentException if the SIS record does not belong to this patient
      */
-    fun affiliateToSis(patientId: Long, sisRecordId: Long): PatientResponse {
+    fun affiliateToSis(patientId: UUID, sisRecordId: UUID): PatientResponse {
         val patient = findPatientOrThrow(patientId)
         val sisRecord = patientSisAffiliationRepository.findById(sisRecordId)
             .orElseThrow {
@@ -634,14 +600,10 @@ class PatientService(
      * @return list of SIS affiliation records ordered by creation time (descending)
      */
     @Transactional(readOnly = true)
-    fun getSisAffiliationHistory(patientId: Long): List<SisAffiliationResponse> {
+    fun getSisAffiliationHistory(patientId: UUID): List<SisAffiliationResponse> {
         return patientSisAffiliationRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
             .map { it.toResponse() }
     }
-
-    // ═══════════════════════════════════════════════════════
-    // Companion Management
-    // ═══════════════════════════════════════════════════════
 
     /**
      * Link a companion to a patient.
@@ -659,8 +621,8 @@ class PatientService(
      * @throws IllegalArgumentException if role validation fails or link already exists
      */
     fun linkCompanion(
-        patientId: Long,
-        companionId: Long,
+        patientId: UUID,
+        companionId: UUID,
         isPrimaryInformant: Boolean = false
     ): PatientResponse {
         val patient = findPatientOrThrow(patientId)
@@ -678,7 +640,6 @@ class PatientService(
             )
         }
 
-        // Check for existing link
         val existing = companionPatientRepository.findByPatientIdAndCompanionId(
             patientId = patientId,
             companionId = companionId
@@ -706,7 +667,7 @@ class PatientService(
      * @param companionId the companion's patient record ID
      * @throws EntityNotFoundException if the link does not exist
      */
-    fun unlinkCompanion(patientId: Long, companionId: Long) {
+    fun unlinkCompanion(patientId: UUID, companionId: UUID) {
         val link = companionPatientRepository.findByPatientIdAndCompanionId(
             patientId = patientId,
             companionId = companionId
@@ -724,7 +685,7 @@ class PatientService(
      * @return list of companion responses
      */
     @Transactional(readOnly = true)
-    fun getCompanions(patientId: Long): List<CompanionResponse> {
+    fun getCompanions(patientId: UUID): List<CompanionResponse> {
         return companionPatientRepository.findByPatientId(patientId)
             .map { it.toCompanionResponse() }
     }
@@ -736,14 +697,10 @@ class PatientService(
      * @return list of patient responses for all linked patients
      */
     @Transactional(readOnly = true)
-    fun getPatientsForCompanion(companionId: Long): List<PatientResponse> {
+    fun getPatientsForCompanion(companionId: UUID): List<PatientResponse> {
         return companionPatientRepository.findByCompanionId(companionId)
             .map { buildPatientResponse(it.patient) }
     }
-
-    // ═══════════════════════════════════════════════════════
-    // Full Enrollment
-    // ═══════════════════════════════════════════════════════
 
     /**
      * Atomically create or enroll a patient with all related data in one transaction.
@@ -776,12 +733,10 @@ class PatientService(
             "details is required for enrollment"
         }
 
-        // 1. Get or create patient
         val patient = if (request.patientId != null) {
             val p = findPatientOrThrow(request.patientId)
 
             if (request.patientData != null) {
-                // Validate DNI uniqueness if changed
                 request.patientData.dni?.let { newDni ->
                     if (newDni != p.dni) {
                         val existing = patientRepository.findByDni(newDni)
@@ -811,37 +766,30 @@ class PatientService(
 
         val patientId = patient.id!!
 
-        // 2. Create or update PatientDetails (required for enrollment)
         createOrUpdateDetails(patient, request.details)
 
-        // 3. Insurance
         if (request.insurance != null) {
             addInsurance(patientId, request.insurance)
         }
 
-        // 4. Diagnosis
         if (request.diagnosis != null) {
             addDiagnosis(patientId, request.diagnosis)
         }
 
-        // 5. Treatment
         if (request.treatment != null) {
             addTreatment(patientId, request.treatment)
         }
 
-        // 6. Medical Appointments
         request.medicalAppointments?.forEach { appointment ->
             addMedicalAppointment(patientId, appointment)
         }
 
-        // 7. SIS Affiliation (only if no real insurance)
         val hasNoRealInsurance = request.insurance == null ||
             request.insurance.insuranceType == InsuranceType.NONE
         if (hasNoRealInsurance && request.sisAffiliation != null) {
             addSisAffiliation(patientId, request.sisAffiliation)
         }
 
-        // 8. Companions
         request.companions?.forEach { companion ->
             linkCompanion(
                 patientId = patientId,
@@ -850,17 +798,11 @@ class PatientService(
             )
         }
 
-        // 9. Set status to ENROLLED
         patient.status = PatientStatus.ENROLLED
         patientRepository.save(patient)
 
-        // 10. Return complete patient
         return getPatient(patientId)
     }
-
-    // ═══════════════════════════════════════════════════════
-    // Contact History
-    // ═══════════════════════════════════════════════════════
 
     /**
      * Get contact history for a patient.
@@ -869,24 +811,11 @@ class PatientService(
      * @return list of contact records ordered by creation time (descending)
      */
     @Transactional(readOnly = true)
-    fun getContactHistory(patientId: Long): List<ContactResponse> {
+    fun getContactHistory(patientId: UUID): List<ContactResponse> {
         return contactRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
             .map { it.toResponse() }
     }
 
-    // ═══════════════════════════════════════════════════════
-    // Private Helpers
-    // ═══════════════════════════════════════════════════════
-
-    /**
-     * Build a [Patient] entity from a [CreatePatientRequest] without persisting it.
-     *
-     * Validates DNI uniqueness. The caller is responsible for saving the entity.
-     *
-     * @param request the patient creation data
-     * @return the constructed (unsaved) Patient entity
-     * @throws IllegalArgumentException if the DNI is already registered
-     */
     private fun createPatientEntity(request: CreatePatientRequest): Patient {
         request.dni?.let { dni ->
             if (patientRepository.findByDni(dni) != null) {
@@ -908,15 +837,6 @@ class PatientService(
         )
     }
 
-    /**
-     * Create or update PatientDetails for a patient.
-     *
-     * If details already exist, non-null fields from [request] are applied
-     * (update semantics). If no details exist, a new record is created.
-     *
-     * @param patient the managed patient entity
-     * @param request the details data
-     */
     private fun createOrUpdateDetails(patient: Patient, request: EnrollPatientDetailsRequest) {
         val existingDetails = patientDetailsRepository.findByPatientId(patient.id!!)
 
@@ -955,29 +875,16 @@ class PatientService(
         }
     }
 
-    /**
-     * Find a patient by ID or throw a descriptive exception.
-     */
-    private fun findPatientOrThrow(patientId: Long): Patient {
+    private fun findPatientOrThrow(patientId: UUID): Patient {
         return patientRepository.findById(patientId)
             .orElseThrow { EntityNotFoundException("Patient not found with id: $patientId") }
     }
 
-    /**
-     * Find a contact by ID or throw a descriptive exception.
-     */
-    private fun findContactOrThrow(contactId: Long): Contact {
+    private fun findContactOrThrow(contactId: UUID): Contact {
         return contactRepository.findById(contactId)
             .orElseThrow { EntityNotFoundException("Contact not found with id: $contactId") }
     }
 
-    /**
-     * Build a complete PatientResponse by eagerly loading all related data
-     * for the given patient.
-     *
-     * This method queries all sub-entity repositories within the current
-     * transaction, ensuring lazy-loaded relationships can be resolved.
-     */
     private fun buildPatientResponse(patient: Patient): PatientResponse {
         val patientId = patient.id!!
 
@@ -1013,9 +920,6 @@ class PatientService(
         )
     }
 
-    // ═══════════════════════════════════════════════════════
-    // Entity-to-DTO Mappers
-    // ═══════════════════════════════════════════════════════
 
     private fun PatientDetails.toResponse(): PatientDetailsResponse = PatientDetailsResponse(
         id = id!!,

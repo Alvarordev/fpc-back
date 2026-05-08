@@ -13,6 +13,7 @@ import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
 import java.time.LocalDateTime
+import java.util.UUID
 
 /**
  * Volunteer extending a user account via 1:1 relationship (same pattern as Agent).
@@ -22,8 +23,8 @@ import java.time.LocalDateTime
 @Table(name = "volunteers")
 class Volunteer(
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long? = null,
+    @GeneratedValue(strategy = GenerationType.UUID)
+    val id: UUID? = null,
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false, unique = true)

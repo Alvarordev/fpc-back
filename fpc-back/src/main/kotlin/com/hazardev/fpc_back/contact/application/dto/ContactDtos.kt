@@ -7,7 +7,7 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 data class CreateContactRequest(
-    val patientId: Long,
+    val patientId: UUID,
     val agentId: UUID? = null,
     val type: ContactType,
     val status: ContactStatus,
@@ -15,11 +15,11 @@ data class CreateContactRequest(
     val scheduledAt: LocalDateTime? = null,
     val completedAt: LocalDateTime? = null,
     val notes: String? = null,
-    val scheduledNextContactId: Long? = null
+    val scheduledNextContactId: UUID? = null
 )
 
 data class UpdateContactRequest(
-    val patientId: Long? = null,
+    val patientId: UUID? = null,
     val agentId: UUID? = null,
     val type: ContactType? = null,
     val status: ContactStatus? = null,
@@ -27,12 +27,12 @@ data class UpdateContactRequest(
     val scheduledAt: LocalDateTime? = null,
     val completedAt: LocalDateTime? = null,
     val notes: String? = null,
-    val scheduledNextContactId: Long? = null
+    val scheduledNextContactId: UUID? = null
 )
 
 data class ContactResponse(
-    val id: Long,
-    val patientId: Long,
+    val id: UUID,
+    val patientId: UUID,
     val agentId: UUID?,
     val type: ContactType,
     val status: ContactStatus,
@@ -40,7 +40,7 @@ data class ContactResponse(
     val scheduledAt: LocalDateTime?,
     val completedAt: LocalDateTime?,
     val notes: String?,
-    val scheduledNextContactId: Long?,
+    val scheduledNextContactId: UUID?,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime
 )

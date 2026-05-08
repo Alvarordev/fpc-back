@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import java.time.LocalDate
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/volunteers/{volunteerId}/availability")
@@ -33,7 +34,7 @@ class VolunteerAvailabilityController(
 
     @GetMapping
     fun getAllSlots(
-        @PathVariable volunteerId: Long,
+        @PathVariable volunteerId: UUID,
         @RequestParam(required = false) startDate: LocalDate?,
         @RequestParam(required = false) endDate: LocalDate?
     ): List<AvailabilitySlotResponse> {
@@ -54,8 +55,8 @@ class VolunteerAvailabilityController(
 
     @GetMapping("/{id}")
     fun getSlotById(
-        @PathVariable volunteerId: Long,
-        @PathVariable id: Long
+        @PathVariable volunteerId: UUID,
+        @PathVariable id: UUID
     ): AvailabilitySlotResponse {
         val slot = volunteerAvailabilityService.getSlotById(id)
         return AvailabilitySlotResponse(
@@ -71,8 +72,8 @@ class VolunteerAvailabilityController(
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     fun updateSlot(
-        @PathVariable volunteerId: Long,
-        @PathVariable id: Long,
+        @PathVariable volunteerId: UUID,
+        @PathVariable id: UUID,
         @RequestBody request: UpdateSlotRequest
     ): AvailabilitySlotResponse {
         val slot = volunteerAvailabilityService.updateSlot(id, request)
@@ -89,8 +90,8 @@ class VolunteerAvailabilityController(
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     fun deleteSlot(
-        @PathVariable volunteerId: Long,
-        @PathVariable id: Long
+        @PathVariable volunteerId: UUID,
+        @PathVariable id: UUID
     ): ResponseEntity<Void> {
         volunteerAvailabilityService.deleteSlot(id)
         return ResponseEntity.noContent().build()

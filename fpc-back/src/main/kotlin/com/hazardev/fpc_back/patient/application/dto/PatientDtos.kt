@@ -11,13 +11,10 @@ import com.hazardev.fpc_back.shared.domain.PatientRole
 import com.hazardev.fpc_back.shared.domain.PatientStatus
 import java.time.LocalDate
 import java.time.LocalDateTime
-
-// ═══════════════════════════════════════════════════════════
-// Shared summary types used across multiple response DTOs
-// ═══════════════════════════════════════════════════════════
+import java.util.UUID
 
 data class ContactSummary(
-    val id: Long,
+    val id: UUID,
     val agentName: String?,
     val type: ContactType,
     val status: ContactStatus,
@@ -25,17 +22,10 @@ data class ContactSummary(
 )
 
 data class DiagnosisSummary(
-    val id: Long,
+    val id: UUID,
     val diagnosis: String
 )
 
-// ═══════════════════════════════════════════════════════════
-// Core Patient DTOs
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Request to create a new patient (prospect).
- */
 data class CreatePatientRequest(
     val fullName: String,
     val dni: String? = null,
@@ -47,10 +37,6 @@ data class CreatePatientRequest(
     val status: PatientStatus? = null
 )
 
-/**
- * Request to update basic patient information.
- * All fields are optional — only provided fields will be updated.
- */
 data class UpdatePatientRequest(
     val fullName: String? = null,
     val dni: String? = null,
@@ -61,11 +47,8 @@ data class UpdatePatientRequest(
     val role: PatientRole? = null
 )
 
-/**
- * Complete patient response including all related entities.
- */
 data class PatientResponse(
-    val id: Long,
+    val id: UUID,
     val fullName: String,
     val dni: String?,
     val birthDate: LocalDate?,
@@ -85,10 +68,6 @@ data class PatientResponse(
     val companions: List<CompanionResponse>,
     val contacts: List<ContactResponse>
 )
-
-// ═══════════════════════════════════════════════════════════
-// Patient Details DTOs
-// ═══════════════════════════════════════════════════════════
 
 /**
  * Request to enroll a patient by creating their detailed record.
@@ -126,10 +105,6 @@ data class EnrollPatientDetailsRequest(
     val requiresTranslation: Boolean = false
 )
 
-/**
- * Request to update existing patient details.
- * All fields are optional.
- */
 data class UpdatePatientDetailsRequest(
     val birthDepartment: String? = null,
     val currentAddress: String? = null,
@@ -144,12 +119,9 @@ data class UpdatePatientDetailsRequest(
     val requiresTranslation: Boolean? = null
 )
 
-/**
- * Response representation of patient details.
- */
 data class PatientDetailsResponse(
-    val id: Long,
-    val patientId: Long,
+    val id: UUID,
+    val patientId: UUID,
     val birthDepartment: String?,
     val currentAddress: String?,
     val currentDistrict: String?,
@@ -165,13 +137,6 @@ data class PatientDetailsResponse(
     val updatedAt: LocalDateTime
 )
 
-// ═══════════════════════════════════════════════════════════
-// Insurance DTOs
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Request to add a new insurance record for a patient.
- */
 data class AddInsuranceRequest(
     val insuranceType: InsuranceType,
     val epsProvider: EpsProvider? = null,
@@ -179,15 +144,12 @@ data class AddInsuranceRequest(
     val changeReason: String? = null,
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
-    val contactId: Long
+    val contactId: UUID
 )
 
-/**
- * Response for an insurance history record.
- */
 data class InsuranceRecordResponse(
-    val id: Long,
-    val patientId: Long,
+    val id: UUID,
+    val patientId: UUID,
     val insuranceType: InsuranceType,
     val epsProvider: EpsProvider?,
     val isCurrent: Boolean,
@@ -198,37 +160,27 @@ data class InsuranceRecordResponse(
     val contact: ContactSummary
 )
 
-// ═══════════════════════════════════════════════════════════
-// Diagnosis DTOs
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Request to add a new diagnosis record for a patient.
- */
 data class AddDiagnosisRequest(
     val diagnosis: String,
     val cancerStage: CancerStage? = null,
     val diagnosisDate: LocalDate? = null,
-    val healthCenterId: Long? = null,
+    val healthCenterId: UUID? = null,
     val diagnosisSpecialty: String? = null,
     val symptomLeadingToCheckup: String? = null,
     val waitTimeForDiagnosis: String? = null,
     val hasMedicalReport: Boolean = false,
     val isCurrent: Boolean,
     val changeReason: String? = null,
-    val contactId: Long
+    val contactId: UUID
 )
 
-/**
- * Response for a diagnosis history record.
- */
 data class DiagnosisRecordResponse(
-    val id: Long,
-    val patientId: Long,
+    val id: UUID,
+    val patientId: UUID,
     val diagnosis: String,
     val cancerStage: CancerStage?,
     val diagnosisDate: LocalDate?,
-    val healthCenterId: Long?,
+    val healthCenterId: UUID?,
     val healthCenterName: String?,
     val diagnosisSpecialty: String?,
     val symptomLeadingToCheckup: String?,
@@ -240,36 +192,26 @@ data class DiagnosisRecordResponse(
     val contact: ContactSummary
 )
 
-// ═══════════════════════════════════════════════════════════
-// Treatment DTOs
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Request to add a new treatment record linked to a diagnosis.
- */
 data class AddTreatmentRequest(
-    val diagnosisId: Long,
+    val diagnosisId: UUID,
     val treatmentType: String,
     val treatmentFrequency: String? = null,
-    val healthCenterId: Long? = null,
+    val healthCenterId: UUID? = null,
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
     val isCurrent: Boolean,
     val changeReason: String? = null,
     val notReceivingReason: String? = null,
-    val contactId: Long
+    val contactId: UUID
 )
 
-/**
- * Response for a treatment history record.
- */
 data class TreatmentRecordResponse(
-    val id: Long,
-    val patientId: Long,
+    val id: UUID,
+    val patientId: UUID,
     val diagnosis: DiagnosisSummary,
     val treatmentType: String,
     val treatmentFrequency: String?,
-    val healthCenterId: Long?,
+    val healthCenterId: UUID?,
     val healthCenterName: String?,
     val startDate: LocalDate?,
     val endDate: LocalDate?,
@@ -280,31 +222,21 @@ data class TreatmentRecordResponse(
     val contact: ContactSummary
 )
 
-// ═══════════════════════════════════════════════════════════
-// Medical Appointment DTOs
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Request to add a medical appointment record for a patient.
- */
 data class AddMedicalAppointmentRequest(
-    val healthCenterId: Long? = null,
+    val healthCenterId: UUID? = null,
     val specialty: String? = null,
     val appointmentDate: LocalDate? = null,
     val nextAppointmentDate: LocalDate? = null,
     val hasReferralSheet: Boolean = false,
     val referredTo: String? = null,
     val difficulties: String? = null,
-    val contactId: Long
+    val contactId: UUID
 )
 
-/**
- * Response for a medical appointment record.
- */
 data class MedicalAppointmentResponse(
-    val id: Long,
-    val patientId: Long,
-    val healthCenterId: Long?,
+    val id: UUID,
+    val patientId: UUID,
+    val healthCenterId: UUID?,
     val healthCenterName: String?,
     val specialty: String?,
     val appointmentDate: LocalDate?,
@@ -316,27 +248,17 @@ data class MedicalAppointmentResponse(
     val contact: ContactSummary
 )
 
-// ═══════════════════════════════════════════════════════════
-// SIS Affiliation DTOs
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Request to add a SIS affiliation attempt for a patient.
- */
 data class AddSisAffiliationRequest(
     val canAffiliate: Boolean,
     val expectedDate: LocalDate? = null,
     val cantAffiliateReason: String? = null,
-    val contactId: Long
+    val contactId: UUID
 )
 
-/**
- * Response for a SIS affiliation record.
- */
 data class SisAffiliationResponse(
-    val id: Long,
-    val patientId: Long,
-    val contactId: Long,
+    val id: UUID,
+    val patientId: UUID,
+    val contactId: UUID,
     val canAffiliate: Boolean,
     val expectedDate: LocalDate?,
     val cantAffiliateReason: String?,
@@ -344,28 +266,14 @@ data class SisAffiliationResponse(
     val createdAt: LocalDateTime
 )
 
-// ═══════════════════════════════════════════════════════════
-// Companion DTOs
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Response for a companion linked to a patient.
- */
 data class CompanionResponse(
-    val companionId: Long,
+    val companionId: UUID,
     val companionFullName: String,
     val isPrimaryInformant: Boolean
 )
 
-// ═══════════════════════════════════════════════════════════
-// Contact DTOs
-// ═══════════════════════════════════════════════════════════
-
-/**
- * Response for a contact record in the patient's contact history.
- */
 data class ContactResponse(
-    val id: Long,
+    val id: UUID,
     val agentName: String?,
     val type: ContactType,
     val status: ContactStatus,
@@ -375,10 +283,6 @@ data class ContactResponse(
     val notes: String?,
     val createdAt: LocalDateTime
 )
-
-// ═══════════════════════════════════════════════════════════
-// Full Enrollment DTO
-// ═══════════════════════════════════════════════════════════
 
 /**
  * Composite request for atomically creating/enrolling a patient
@@ -400,7 +304,7 @@ data class ContactResponse(
  * @property contactId The contact that initiated this enrollment
  */
 data class FullEnrollmentRequest(
-    val patientId: Long?,
+    val patientId: UUID?,
     val patientData: CreatePatientRequest?,
     val details: EnrollPatientDetailsRequest?,
     val insurance: AddInsuranceRequest?,
@@ -409,5 +313,5 @@ data class FullEnrollmentRequest(
     val medicalAppointments: List<AddMedicalAppointmentRequest>?,
     val sisAffiliation: AddSisAffiliationRequest?,
     val companions: List<LinkCompanionRequest>?,
-    val contactId: Long?
+    val contactId: UUID?
 )

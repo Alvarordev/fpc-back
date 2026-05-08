@@ -4,22 +4,14 @@ import com.hazardev.fpc_back.psychooncology.domain.PsychooncologyAppointment
 import com.hazardev.fpc_back.shared.domain.AppointmentStatus
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
+import java.util.UUID
 
 @Repository
-interface PsychooncologyAppointmentRepository : JpaRepository<PsychooncologyAppointment, Long> {
+interface PsychooncologyAppointmentRepository : JpaRepository<PsychooncologyAppointment, UUID> {
 
-    /**
-     * Find all appointments for a specific patient.
-     */
-    fun findByPatientId(patientId: Long): List<PsychooncologyAppointment>
+    fun findByPatientId(patientId: UUID): List<PsychooncologyAppointment>
 
-    /**
-     * Find all appointments for a specific volunteer.
-     */
-    fun findByVolunteerId(volunteerId: Long): List<PsychooncologyAppointment>
+    fun findByVolunteerId(volunteerId: UUID): List<PsychooncologyAppointment>
 
-    /**
-     * Find all upcoming (scheduled) appointments ordered by scheduled time ascending.
-     */
     fun findByStatusOrderByScheduledAtAsc(status: AppointmentStatus): List<PsychooncologyAppointment>
 }

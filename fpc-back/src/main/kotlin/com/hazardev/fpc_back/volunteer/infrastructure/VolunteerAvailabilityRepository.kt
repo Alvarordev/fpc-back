@@ -10,37 +10,26 @@ import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import java.time.LocalDate
 import java.util.Optional
+import java.util.UUID
 
 @Repository
-interface VolunteerAvailabilityRepository : JpaRepository<VolunteerAvailability, Long> {
+interface VolunteerAvailabilityRepository : JpaRepository<VolunteerAvailability, UUID> {
 
-    /**
-     * Find all availability slots for a volunteer within a date range.
-     */
     fun findByVolunteerIdAndDateBetween(
-        volunteerId: Long,
+        volunteerId: UUID,
         startDate: LocalDate,
         endDate: LocalDate
     ): List<VolunteerAvailability>
 
-    /**
-     * Find availability slots by status and volunteer.
-     */
     fun findByStatusAndVolunteerId(
         status: AvailabilityStatus,
-        volunteerId: Long
+        volunteerId: UUID
     ): List<VolunteerAvailability>
 
-    /**
-     * Find all availability slots for a specific volunteer.
-     */
-    fun findByVolunteerId(volunteerId: Long): List<VolunteerAvailability>
+    fun findByVolunteerId(volunteerId: UUID): List<VolunteerAvailability>
 
-    /**
-     * Check if a duplicate slot exists for the same volunteer, date, and start time.
-     */
     fun existsByVolunteerIdAndDateAndStartTime(
-        volunteerId: Long,
+        volunteerId: UUID,
         date: LocalDate,
         startTime: java.time.LocalTime
     ): Boolean
@@ -51,5 +40,5 @@ interface VolunteerAvailabilityRepository : JpaRepository<VolunteerAvailability,
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT va FROM VolunteerAvailability va WHERE va.id = :id")
-    fun findByIdWithLock(@Param("id") id: Long): Optional<VolunteerAvailability>
+    fun findByIdWithLock(@Param("id") id: UUID): Optional<VolunteerAvailability>
 }

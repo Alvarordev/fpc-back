@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS patients (
-    id BIGSERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     full_name VARCHAR(255) NOT NULL,
     dni VARCHAR(20) UNIQUE,
     birth_date DATE,

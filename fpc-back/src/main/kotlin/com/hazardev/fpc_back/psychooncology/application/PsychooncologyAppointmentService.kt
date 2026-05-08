@@ -16,6 +16,7 @@ import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
+import java.util.UUID
 
 /**
  * Manages the lifecycle of psycho-oncology appointments.
@@ -61,7 +62,6 @@ class PsychooncologyAppointmentService(
             )
         }
 
-        // Load referenced entities (throws EntityNotFoundException if any are missing)
         val patient = patientRepository.findById(request.patientId)
             .orElseThrow { EntityNotFoundException("Patient not found with id: ${request.patientId}") }
 
@@ -110,7 +110,7 @@ class PsychooncologyAppointmentService(
      */
     @Transactional
     fun completeAppointment(
-        appointmentId: Long,
+        appointmentId: UUID,
         request: CompleteAppointmentRequest
     ): PsychooncologyAppointmentResponse {
         val appointment = appointmentRepository.findById(appointmentId)
@@ -149,7 +149,7 @@ class PsychooncologyAppointmentService(
      * @throws IllegalStateException if the appointment is not in SCHEDULED status
      */
     @Transactional
-    fun cancelAppointment(appointmentId: Long) {
+    fun cancelAppointment(appointmentId: UUID) {
         val appointment = appointmentRepository.findById(appointmentId)
             .orElseThrow { EntityNotFoundException("Appointment not found with id: $appointmentId") }
 
@@ -164,7 +164,6 @@ class PsychooncologyAppointmentService(
         appointment.status = AppointmentStatus.CANCELLED
         appointmentRepository.save(appointment)
 
-        // Release the availability slot so it can be reused
         volunteerAvailabilityService.releaseSlot(availabilityId)
     }
 
@@ -174,7 +173,7 @@ class PsychooncologyAppointmentService(
      * @param patientId the patient's ID
      * @return list of appointments ordered by creation time (descending)
      */
-    fun getAppointmentsByPatient(patientId: Long): List<PsychooncologyAppointmentResponse> {
+    fun getAppointmentsByPatient(patientId: UUID): List<PsychooncologyAppointmentResponse> {
         return appointmentRepository.findByPatientId(patientId)
             .map { it.toResponse() }
     }
@@ -185,7 +184,7 @@ class PsychooncologyAppointmentService(
      * @param volunteerId the volunteer's ID
      * @return list of appointments ordered by creation time (descending)
      */
-    fun getAppointmentsByVolunteer(volunteerId: Long): List<PsychooncologyAppointmentResponse> {
+    fun getAppointmentsByVolunteer(volunteerId: UUID): List<PsychooncologyAppointmentResponse> {
         return appointmentRepository.findByVolunteerId(volunteerId)
             .map { it.toResponse() }
     }
@@ -207,7 +206,7 @@ class PsychooncologyAppointmentService(
      * @return the appointment entity
      * @throws EntityNotFoundException if the appointment does not exist
      */
-    fun getById(id: Long): PsychooncologyAppointment {
+    fun getById(id: UUID): PsychooncologyAppointment {
         return appointmentRepository.findById(id)
             .orElseThrow { EntityNotFoundException("Psychooncology appointment not found with id: $id") }
     }
@@ -234,7 +233,7 @@ class PsychooncologyAppointmentService(
      * @throws EntityNotFoundException if the appointment or any referenced entity does not exist
      */
     @Transactional
-    fun updateAppointment(id: Long, request: UpdateAppointmentRequest): PsychooncologyAppointment {
+    fun updateAppointment(id: UUID, request: UpdateAppointmentRequest): PsychooncologyAppointment {
         val appointment = getById(id)
 
         request.patientId?.let { patientId ->
@@ -283,18 +282,14 @@ class PsychooncologyAppointmentService(
      * @throws EntityNotFoundException if the appointment does not exist
      */
     @Transactional
-    fun deleteAppointment(id: Long) {
+    fun deleteAppointment(id: UUID) {
         val appointment = getById(id)
-        // If SCHEDULED, also release the availability slot (same logic as cancelAppointment)
         if (appointment.status == AppointmentStatus.SCHEDULED) {
             volunteerAvailabilityService.releaseSlot(appointment.availability.id!!)
         }
         appointmentRepository.delete(appointment)
     }
 
-    /**
-     * Map entity to response DTO.
-     */
     private fun PsychooncologyAppointment.toResponse(): PsychooncologyAppointmentResponse =
         PsychooncologyAppointmentResponse(
             id = id!!,

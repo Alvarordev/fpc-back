@@ -5,9 +5,10 @@ import com.hazardev.fpc_back.shared.domain.PatientRole
 import com.hazardev.fpc_back.shared.domain.PatientStatus
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
+import java.util.UUID
 
 @Repository
-interface PatientRepository : JpaRepository<Patient, Long> {
+interface PatientRepository : JpaRepository<Patient, UUID> {
 
     fun findByStatus(status: PatientStatus): List<Patient>
 

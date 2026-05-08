@@ -35,6 +35,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 /**
  * REST controller for Patient management.
@@ -48,10 +49,6 @@ import org.springframework.web.bind.annotation.RestController
 class PatientController(
     private val patientService: PatientService
 ) {
-
-    // ═══════════════════════════════════════════════════════
-    // Patient CRUD
-    // ═══════════════════════════════════════════════════════
 
     @GetMapping
     fun getAllPatients(): List<PatientResponse> {
@@ -69,7 +66,7 @@ class PatientController(
     }
 
     @GetMapping("/{id}")
-    fun getPatient(@PathVariable id: Long): PatientResponse {
+    fun getPatient(@PathVariable id: UUID): PatientResponse {
         return patientService.getPatient(id)
     }
 
@@ -81,7 +78,7 @@ class PatientController(
 
     @PutMapping("/{id}")
     fun updatePatient(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: UpdatePatientRequest
     ): PatientResponse {
         return patientService.updatePatient(id, request)
@@ -89,15 +86,11 @@ class PatientController(
 
     @PatchMapping("/{id}/status")
     fun changePatientStatus(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: ChangeStatusRequest
     ): PatientResponse {
         return patientService.changePatientStatus(id, request.newStatus)
     }
-
-    // ═══════════════════════════════════════════════════════
-    // Full Enrollment
-    // ═══════════════════════════════════════════════════════
 
     @PostMapping("/enroll")
     fun fullEnrollment(
@@ -107,13 +100,9 @@ class PatientController(
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
-    // ═══════════════════════════════════════════════════════
-    // Patient Details (Enrollment)
-    // ═══════════════════════════════════════════════════════
-
     @PostMapping("/{id}/enroll")
     fun enrollPatient(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: EnrollPatientRequest
     ): ResponseEntity<PatientResponse> {
         val response = patientService.enrollPatient(id, request)
@@ -122,96 +111,76 @@ class PatientController(
 
     @PutMapping("/{id}/details")
     fun updatePatientDetails(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: UpdatePatientDetailsRequest
     ): PatientResponse {
         return patientService.updatePatientDetails(id, request)
     }
 
-    // ═══════════════════════════════════════════════════════
-    // Insurance
-    // ═══════════════════════════════════════════════════════
-
     @GetMapping("/{id}/insurance")
-    fun getInsuranceHistory(@PathVariable id: Long): List<InsuranceRecordResponse> {
+    fun getInsuranceHistory(@PathVariable id: UUID): List<InsuranceRecordResponse> {
         return patientService.getInsuranceHistory(id)
     }
 
     @PostMapping("/{id}/insurance")
     fun addInsurance(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: AddInsuranceRequest
     ): ResponseEntity<PatientResponse> {
         val response = patientService.addInsurance(id, request)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
-    // ═══════════════════════════════════════════════════════
-    // Diagnosis
-    // ═══════════════════════════════════════════════════════
-
     @GetMapping("/{id}/diagnoses")
-    fun getDiagnosisHistory(@PathVariable id: Long): List<DiagnosisRecordResponse> {
+    fun getDiagnosisHistory(@PathVariable id: UUID): List<DiagnosisRecordResponse> {
         return patientService.getDiagnosisHistory(id)
     }
 
     @PostMapping("/{id}/diagnoses")
     fun addDiagnosis(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: AddDiagnosisRequest
     ): ResponseEntity<PatientResponse> {
         val response = patientService.addDiagnosis(id, request)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
-    // ═══════════════════════════════════════════════════════
-    // Treatment
-    // ═══════════════════════════════════════════════════════
-
     @GetMapping("/{id}/treatments")
-    fun getTreatmentHistory(@PathVariable id: Long): List<TreatmentRecordResponse> {
+    fun getTreatmentHistory(@PathVariable id: UUID): List<TreatmentRecordResponse> {
         return patientService.getTreatmentHistory(id)
     }
 
     @PostMapping("/{id}/treatments")
     fun addTreatment(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: AddTreatmentRequest
     ): ResponseEntity<PatientResponse> {
         val response = patientService.addTreatment(id, request)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
-    // ═══════════════════════════════════════════════════════
-    // Medical Appointments
-    // ═══════════════════════════════════════════════════════
-
     @GetMapping("/{id}/appointments")
-    fun getMedicalAppointmentHistory(@PathVariable id: Long): List<MedicalAppointmentResponse> {
+    fun getMedicalAppointmentHistory(@PathVariable id: UUID): List<MedicalAppointmentResponse> {
         return patientService.getMedicalAppointmentHistory(id)
     }
 
     @PostMapping("/{id}/appointments")
     fun addMedicalAppointment(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: AddMedicalAppointmentRequest
     ): ResponseEntity<PatientResponse> {
         val response = patientService.addMedicalAppointment(id, request)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
-    // ═══════════════════════════════════════════════════════
-    // SIS Affiliation
-    // ═══════════════════════════════════════════════════════
-
     @GetMapping("/{id}/sis")
-    fun getSisAffiliationHistory(@PathVariable id: Long): List<SisAffiliationResponse> {
+    fun getSisAffiliationHistory(@PathVariable id: UUID): List<SisAffiliationResponse> {
         return patientService.getSisAffiliationHistory(id)
     }
 
     @PostMapping("/{id}/sis")
     fun addSisAffiliation(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: AddSisAffiliationRequest
     ): ResponseEntity<PatientResponse> {
         val response = patientService.addSisAffiliation(id, request)
@@ -220,29 +189,25 @@ class PatientController(
 
     @PatchMapping("/{id}/sis/{sisId}/affiliate")
     fun affiliateToSis(
-        @PathVariable id: Long,
-        @PathVariable sisId: Long
+        @PathVariable id: UUID,
+        @PathVariable sisId: UUID
     ): PatientResponse {
         return patientService.affiliateToSis(id, sisId)
     }
 
-    // ═══════════════════════════════════════════════════════
-    // Companions (must appear before /{id}/companions routes)
-    // ═══════════════════════════════════════════════════════
-
     @GetMapping("/companion/{companionId}/patients")
-    fun getPatientsForCompanion(@PathVariable companionId: Long): List<PatientResponse> {
+    fun getPatientsForCompanion(@PathVariable companionId: UUID): List<PatientResponse> {
         return patientService.getPatientsForCompanion(companionId)
     }
 
     @GetMapping("/{id}/companions")
-    fun getCompanions(@PathVariable id: Long): List<CompanionResponse> {
+    fun getCompanions(@PathVariable id: UUID): List<CompanionResponse> {
         return patientService.getCompanions(id)
     }
 
     @PostMapping("/{id}/companions")
     fun linkCompanion(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: LinkCompanionRequest
     ): ResponseEntity<PatientResponse> {
         val response = patientService.linkCompanion(
@@ -255,19 +220,15 @@ class PatientController(
 
     @DeleteMapping("/{id}/companions/{companionId}")
     fun unlinkCompanion(
-        @PathVariable id: Long,
-        @PathVariable companionId: Long
+        @PathVariable id: UUID,
+        @PathVariable companionId: UUID
     ): ResponseEntity<Void> {
         patientService.unlinkCompanion(id, companionId)
         return ResponseEntity.noContent().build()
     }
 
-    // ═══════════════════════════════════════════════════════
-    // Contact History
-    // ═══════════════════════════════════════════════════════
-
     @GetMapping("/{id}/contacts")
-    fun getContactHistory(@PathVariable id: Long): List<ContactResponse> {
+    fun getContactHistory(@PathVariable id: UUID): List<ContactResponse> {
         return patientService.getContactHistory(id)
     }
 }

@@ -1,6 +1,6 @@
 CREATE TABLE IF NOT EXISTS patient_details (
-    id BIGSERIAL PRIMARY KEY,
-    patient_id BIGINT NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL,
     birth_department VARCHAR(255),
     current_address TEXT,
     current_district VARCHAR(255),

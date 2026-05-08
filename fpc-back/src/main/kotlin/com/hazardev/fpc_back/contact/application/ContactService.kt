@@ -10,6 +10,7 @@ import com.hazardev.fpc_back.patient.infrastructure.PatientRepository
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 class ContactService(
@@ -48,7 +49,7 @@ class ContactService(
         return contactRepository.save(contact).toResponse()
     }
 
-    fun getContactById(id: Long): ContactResponse {
+    fun getContactById(id: UUID): ContactResponse {
         val contact = contactRepository.findById(id)
             .orElseThrow { EntityNotFoundException("Contact not found with id: $id") }
         return contact.toResponse()
@@ -59,7 +60,7 @@ class ContactService(
     }
 
     @Transactional
-    fun updateContact(id: Long, request: UpdateContactRequest): ContactResponse {
+    fun updateContact(id: UUID, request: UpdateContactRequest): ContactResponse {
         val contact = contactRepository.findById(id)
             .orElseThrow { EntityNotFoundException("Contact not found with id: $id") }
 
@@ -95,7 +96,7 @@ class ContactService(
     }
 
     @Transactional
-    fun deleteContact(id: Long) {
+    fun deleteContact(id: UUID) {
         if (!contactRepository.existsById(id)) {
             throw EntityNotFoundException("Contact not found with id: $id")
         }

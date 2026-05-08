@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS patient_insurance (
-    id BIGSERIAL PRIMARY KEY,
-    patient_id BIGINT NOT NULL,
-    contact_id BIGINT NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL,
+    contact_id UUID NOT NULL,
     insurance_type VARCHAR(30) NOT NULL
         CHECK (insurance_type IN ('SIS', 'ESSALUD', 'EPS', 'FUERZAS_ARMADAS', 'SALUDPOL', 'NONE')),
     eps_provider VARCHAR(30)

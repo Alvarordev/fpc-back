@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/contacts")
@@ -35,14 +36,14 @@ class ContactController(
     }
 
     @GetMapping("/{id}")
-    fun getContactById(@PathVariable id: Long): ContactResponse {
+    fun getContactById(@PathVariable id: UUID): ContactResponse {
         return contactService.getContactById(id)
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     fun updateContact(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: UpdateContactRequest
     ): ContactResponse {
         return contactService.updateContact(id, request)
@@ -50,7 +51,7 @@ class ContactController(
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    fun deleteContact(@PathVariable id: Long): ResponseEntity<Void> {
+    fun deleteContact(@PathVariable id: UUID): ResponseEntity<Void> {
         contactService.deleteContact(id)
         return ResponseEntity.noContent().build()
     }

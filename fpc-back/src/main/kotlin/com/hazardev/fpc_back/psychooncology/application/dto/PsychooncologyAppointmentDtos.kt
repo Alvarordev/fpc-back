@@ -4,15 +4,13 @@ import com.hazardev.fpc_back.shared.domain.AppointmentModality
 import com.hazardev.fpc_back.shared.domain.AppointmentStatus
 import com.hazardev.fpc_back.shared.domain.ReferralType
 import java.time.LocalDateTime
+import java.util.UUID
 
-/**
- * Request to schedule a psycho-oncology appointment.
- */
 data class ScheduleAppointmentRequest(
-    val patientId: Long,
-    val volunteerId: Long,
-    val contactId: Long,
-    val availabilityId: Long,
+    val patientId: UUID,
+    val volunteerId: UUID,
+    val contactId: UUID,
+    val availabilityId: UUID,
     val patientEmail: String? = null,
     val sessionNumber: Int,
     val isAdditionalSession: Boolean = false,
@@ -33,15 +31,11 @@ data class CompleteAppointmentRequest(
     val referral: ReferralType? = null
 )
 
-/**
- * Request to update an existing psycho-oncology appointment.
- * All fields are optional — only provided fields will be modified.
- */
 data class UpdateAppointmentRequest(
-    val patientId: Long? = null,
-    val volunteerId: Long? = null,
-    val contactId: Long? = null,
-    val availabilityId: Long? = null,
+    val patientId: UUID? = null,
+    val volunteerId: UUID? = null,
+    val contactId: UUID? = null,
+    val availabilityId: UUID? = null,
     val patientEmail: String? = null,
     val sessionNumber: Int? = null,
     val isAdditionalSession: Boolean? = null,
@@ -56,15 +50,12 @@ data class UpdateAppointmentRequest(
     val referral: ReferralType? = null
 )
 
-/**
- * Full response representation of a psycho-oncology appointment.
- */
 data class PsychooncologyAppointmentResponse(
-    val id: Long,
-    val patientId: Long,
-    val volunteerId: Long,
-    val contactId: Long,
-    val availabilityId: Long,
+    val id: UUID,
+    val patientId: UUID,
+    val volunteerId: UUID,
+    val contactId: UUID,
+    val availabilityId: UUID,
     val patientEmail: String?,
     val sessionNumber: Int,
     val isAdditionalSession: Boolean,

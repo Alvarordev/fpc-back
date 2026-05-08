@@ -26,7 +26,7 @@ data class UpdateVolunteerRequest(
 )
 
 data class VolunteerResponse(
-    val id: Long,
+    val id: UUID,
     val userId: UUID,
     val firstName: String,
     val lastName: String,
@@ -51,18 +51,15 @@ data class UpdateSlotRequest(
  * before sending.
  */
 data class CreateSlotRequest(
-    val volunteerId: Long,
+    val volunteerId: UUID,
     val date: LocalDate,
     val startTime: LocalTime,
     val endTime: LocalTime
 )
 
-/**
- * Response containing details of an availability slot.
- */
 data class AvailabilitySlotResponse(
-    val id: Long,
-    val volunteerId: Long,
+    val id: UUID,
+    val volunteerId: UUID,
     val date: LocalDate,
     val startTime: LocalTime,
     val endTime: LocalTime,

@@ -1,8 +1,8 @@
 CREATE TABLE IF NOT EXISTS patient_treatments (
-    id BIGSERIAL PRIMARY KEY,
-    patient_id BIGINT NOT NULL,
-    contact_id BIGINT NOT NULL,
-    diagnosis_id BIGINT NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL,
+    contact_id UUID NOT NULL,
+    diagnosis_id UUID NOT NULL,
     treatment_type VARCHAR(255) NOT NULL,
     treatment_frequency VARCHAR(100),
     health_establishment VARCHAR(255),

@@ -17,13 +17,14 @@ import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.UUID
 
 @Entity
 @Table(name = "patient_insurance")
 class PatientInsurance(
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long? = null,
+    @GeneratedValue(strategy = GenerationType.UUID)
+    val id: UUID? = null,
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "patient_id", nullable = false)

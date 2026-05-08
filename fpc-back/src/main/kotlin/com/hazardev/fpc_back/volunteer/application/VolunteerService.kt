@@ -43,7 +43,7 @@ class VolunteerService(
         return volunteerRepository.findAll().map { it.toResponse() }
     }
 
-    fun getById(id: Long): VolunteerResponse {
+    fun getById(id: UUID): VolunteerResponse {
         val volunteer = volunteerRepository.findById(id)
             .orElseThrow { EntityNotFoundException("Volunteer not found with id: $id") }
         return volunteer.toResponse()
@@ -56,7 +56,7 @@ class VolunteerService(
     }
 
     @Transactional
-    fun update(id: Long, request: UpdateVolunteerRequest): VolunteerResponse {
+    fun update(id: UUID, request: UpdateVolunteerRequest): VolunteerResponse {
         val volunteer = volunteerRepository.findById(id)
             .orElseThrow { EntityNotFoundException("Volunteer not found with id: $id") }
 
@@ -71,7 +71,7 @@ class VolunteerService(
     }
 
     @Transactional
-    fun delete(id: Long) {
+    fun delete(id: UUID) {
         if (!volunteerRepository.existsById(id)) {
             throw EntityNotFoundException("Volunteer not found with id: $id")
         }

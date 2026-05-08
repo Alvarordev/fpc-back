@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS alerts (
-    id BIGSERIAL PRIMARY KEY,
-    health_center_id BIGINT NOT NULL,
-    contact_id BIGINT NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    health_center_id UUID NOT NULL,
+    contact_id UUID NOT NULL,
     created_by_id UUID NOT NULL,
     description TEXT NOT NULL,
     status VARCHAR(30) NOT NULL DEFAULT 'ACTIVE'

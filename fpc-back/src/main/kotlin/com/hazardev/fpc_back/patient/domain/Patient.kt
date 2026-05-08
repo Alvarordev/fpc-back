@@ -14,13 +14,14 @@ import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.UUID
 
 @Entity
 @Table(name = "patients")
 class Patient(
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long? = null,
+    @GeneratedValue(strategy = GenerationType.UUID)
+    val id: UUID? = null,
 
     @Column(name = "full_name", nullable = false)
     var fullName: String,

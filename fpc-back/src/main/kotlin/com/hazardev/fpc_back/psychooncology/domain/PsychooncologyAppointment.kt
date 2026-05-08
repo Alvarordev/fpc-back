@@ -21,6 +21,7 @@ import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
 import java.time.LocalDateTime
+import java.util.UUID
 
 /**
  * Psycho-oncology appointment scheduled by an agent from a contact,
@@ -34,8 +35,8 @@ import java.time.LocalDateTime
 @Table(name = "psychooncology_appointments")
 class PsychooncologyAppointment(
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long? = null,
+    @GeneratedValue(strategy = GenerationType.UUID)
+    val id: UUID? = null,
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "patient_id", nullable = false)

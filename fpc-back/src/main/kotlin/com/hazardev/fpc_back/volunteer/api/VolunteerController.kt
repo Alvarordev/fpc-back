@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/volunteers")
@@ -35,14 +36,14 @@ class VolunteerController(
     }
 
     @GetMapping("/{id}")
-    fun getById(@PathVariable id: Long): VolunteerResponse {
+    fun getById(@PathVariable id: UUID): VolunteerResponse {
         return volunteerService.getById(id)
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     fun update(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: UpdateVolunteerRequest
     ): VolunteerResponse {
         return volunteerService.update(id, request)
@@ -50,7 +51,7 @@ class VolunteerController(
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    fun delete(@PathVariable id: Long): ResponseEntity<Void> {
+    fun delete(@PathVariable id: UUID): ResponseEntity<Void> {
         volunteerService.delete(id)
         return ResponseEntity.noContent().build()
     }

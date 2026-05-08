@@ -5,6 +5,7 @@ import com.hazardev.fpc_back.agent.infrastructure.AgentRepository
 import com.hazardev.fpc_back.alert.application.dto.AlertResponse
 import com.hazardev.fpc_back.alert.application.dto.CreateAlertRequest
 import com.hazardev.fpc_back.alert.application.dto.ResolveAlertRequest
+import com.hazardev.fpc_back.alert.application.dto.UpdateAlertRequest
 import com.hazardev.fpc_back.alert.domain.Alert
 import com.hazardev.fpc_back.alert.infrastructure.AlertRepository
 import com.hazardev.fpc_back.contact.infrastructure.ContactRepository
@@ -99,7 +100,7 @@ class AlertService(
      * @throws IllegalStateException if the alert is not in ACTIVE status
      */
     @Transactional
-    fun resolveAlert(alertId: Long, request: ResolveAlertRequest): AlertResponse {
+    fun resolveAlert(alertId: UUID, request: ResolveAlertRequest): AlertResponse {
         val alert = alertRepository.findById(alertId)
             .orElseThrow {
                 EntityNotFoundException("Alert not found with id: $alertId")
@@ -128,41 +129,21 @@ class AlertService(
         return saved.toResponse()
     }
 
-    /**
-     * Get all alerts associated with a specific health center.
-     *
-     * @param healthCenterId the health center's ID
-     * @return list of alert response DTOs
-     */
-    fun getAlertsByHealthCenter(healthCenterId: Long): List<AlertResponse> {
+    fun getAlertsByHealthCenter(healthCenterId: UUID): List<AlertResponse> {
         return alertRepository.findByHealthCenterId(healthCenterId)
             .map { it.toResponse() }
     }
 
-    /**
-     * Get all alerts that are currently in ACTIVE status.
-     *
-     * @return list of active alert response DTOs
-     */
     fun getActiveAlerts(): List<AlertResponse> {
         return alertRepository.findByStatus(AlertStatus.ACTIVE)
             .map { it.toResponse() }
     }
 
-    /**
-     * Get all alerts created by a specific agent.
-     *
-     * @param agentId the agent's UUID
-     * @return list of alert response DTOs created by that agent
-     */
     fun getAlertsByAgent(agentId: UUID): List<AlertResponse> {
         return alertRepository.findByCreatedById(agentId)
             .map { it.toResponse() }
     }
 
-    /**
-     * Map entity to response DTO.
-     */
     private fun Alert.toResponse(): AlertResponse = AlertResponse(
         id = id!!,
         healthCenterId = healthCenter.id!!,
@@ -178,4 +159,43 @@ class AlertService(
         createdAt = createdAt,
         updatedAt = updatedAt
     )
+
+    fun getAlertById(id: UUID): AlertResponse {
+        val alert = alertRepository.findById(id)
+            .orElseThrow { EntityNotFoundException("Alert not found with id: $id") }
+        return alert.toResponse()
+    }
+
+    fun getAllAlerts(): List<AlertResponse> {
+        return alertRepository.findAll().map { it.toResponse() }
+    }
+
+    @Transactional
+    fun updateAlert(id: UUID, request: UpdateAlertRequest): AlertResponse {
+        val alert = alertRepository.findById(id)
+            .orElseThrow { EntityNotFoundException("Alert not found with id: $id") }
+
+        request.description?.let { alert.description = it }
+
+        request.healthCenterId?.let { healthCenterId ->
+            val healthCenter = healthCenterRepository.findById(healthCenterId)
+                .orElseThrow { EntityNotFoundException("Health center not found with id: $healthCenterId") }
+            alert.healthCenter = healthCenter
+        }
+
+        request.contactId?.let { contactId ->
+            val contact = contactRepository.findById(contactId)
+                .orElseThrow { EntityNotFoundException("Contact not found with id: $contactId") }
+            alert.contact = contact
+        }
+
+        return alertRepository.save(alert).toResponse()
+    }
+
+    @Transactional
+    fun deleteAlert(id: UUID) {
+        val alert = alertRepository.findById(id)
+            .orElseThrow { EntityNotFoundException("Alert not found with id: $id") }
+        alertRepository.delete(alert)
+    }
 }

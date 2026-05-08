@@ -11,13 +11,14 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
 import java.time.LocalDateTime
+import java.util.UUID
 
 @Entity
 @Table(name = "companion_patient")
 class CompanionPatient(
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long? = null,
+    @GeneratedValue(strategy = GenerationType.UUID)
+    val id: UUID? = null,
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "companion_id", nullable = false)

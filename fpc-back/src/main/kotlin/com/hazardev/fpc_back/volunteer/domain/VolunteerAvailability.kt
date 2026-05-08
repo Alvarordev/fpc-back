@@ -17,6 +17,7 @@ import org.hibernate.annotations.CreationTimestamp
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.util.UUID
 
 /**
  * Individual 1-hour availability slot for a volunteer.
@@ -36,8 +37,8 @@ import java.time.LocalTime
 )
 class VolunteerAvailability(
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    val id: Long? = null,
+    @GeneratedValue(strategy = GenerationType.UUID)
+    val id: UUID? = null,
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "volunteer_id", nullable = false)

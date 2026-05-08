@@ -12,6 +12,7 @@ import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import java.util.UUID
 
 /**
  * Manages volunteer availability slots.
@@ -69,16 +70,8 @@ class VolunteerAvailabilityService(
         return availabilityRepository.save(slot).toResponse()
     }
 
-    /**
-     * Get all AVAILABLE slots for a volunteer within a date range.
-     *
-     * @param volunteerId the volunteer's ID
-     * @param startDate inclusive start of the date range
-     * @param endDate inclusive end of the date range
-     * @return list of availability slots
-     */
     fun getAvailableSlots(
-        volunteerId: Long,
+        volunteerId: UUID,
         startDate: LocalDate,
         endDate: LocalDate
     ): List<AvailabilitySlotResponse> {
@@ -102,7 +95,7 @@ class VolunteerAvailabilityService(
      * @throws IllegalStateException if the slot is not currently AVAILABLE
      */
     @Transactional
-    fun reserveSlot(slotId: Long): AvailabilitySlotResponse {
+    fun reserveSlot(slotId: UUID): AvailabilitySlotResponse {
         val slot = availabilityRepository.findByIdWithLock(slotId)
             .orElseThrow { EntityNotFoundException("Availability slot not found with id: $slotId") }
 
@@ -116,19 +109,7 @@ class VolunteerAvailabilityService(
         return availabilityRepository.save(slot).toResponse()
     }
 
-    /**
-     * Release a reserved slot back to AVAILABLE.
-     *
-     * Typically called when an appointment is cancelled and the slot
-     * should become available again for other appointments.
-     *
-     * @param slotId the availability slot ID to release
-     * @return the released slot as a response DTO
-     * @throws EntityNotFoundException if the slot does not exist
-     * @throws IllegalStateException if the slot is not currently RESERVED
-     */
-    @Transactional
-    fun releaseSlot(slotId: Long): AvailabilitySlotResponse {
+    fun releaseSlot(slotId: UUID): AvailabilitySlotResponse {
         val slot = availabilityRepository.findById(slotId)
             .orElseThrow { EntityNotFoundException("Availability slot not found with id: $slotId") }
 
@@ -142,17 +123,17 @@ class VolunteerAvailabilityService(
         return availabilityRepository.save(slot).toResponse()
     }
 
-    fun getSlotById(id: Long): VolunteerAvailability {
+    fun getSlotById(id: UUID): VolunteerAvailability {
         return availabilityRepository.findById(id)
             .orElseThrow { EntityNotFoundException("Availability slot not found with id: $id") }
     }
 
-    fun getAllSlotsByVolunteer(volunteerId: Long): List<VolunteerAvailability> {
+    fun getAllSlotsByVolunteer(volunteerId: UUID): List<VolunteerAvailability> {
         return availabilityRepository.findByVolunteerId(volunteerId)
     }
 
     @Transactional
-    fun updateSlot(id: Long, request: UpdateSlotRequest): VolunteerAvailability {
+    fun updateSlot(id: UUID, request: UpdateSlotRequest): VolunteerAvailability {
         val slot = getSlotById(id)
         request.date?.let { slot.date = it }
         request.startTime?.let { slot.startTime = it }
@@ -162,14 +143,11 @@ class VolunteerAvailabilityService(
     }
 
     @Transactional
-    fun deleteSlot(id: Long) {
+    fun deleteSlot(id: UUID) {
         val slot = getSlotById(id)
         availabilityRepository.delete(slot)
     }
 
-    /**
-     * Map entity to response DTO.
-     */
     private fun VolunteerAvailability.toResponse(): AvailabilitySlotResponse = AvailabilitySlotResponse(
         id = id!!,
         volunteerId = volunteer.id!!,

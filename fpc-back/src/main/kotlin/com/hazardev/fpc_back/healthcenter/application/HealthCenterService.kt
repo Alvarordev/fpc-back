@@ -2,6 +2,7 @@ package com.hazardev.fpc_back.healthcenter.application
 
 import com.hazardev.fpc_back.healthcenter.application.dto.CreateHealthCenterRequest
 import com.hazardev.fpc_back.healthcenter.application.dto.HealthCenterResponse
+import com.hazardev.fpc_back.healthcenter.application.dto.UpdateHealthCenterRequest
 import com.hazardev.fpc_back.healthcenter.domain.HealthCenter
 import com.hazardev.fpc_back.healthcenter.infrastructure.HealthCenterRepository
 import com.hazardev.fpc_back.shared.domain.PeruDepartment
@@ -10,6 +11,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.text.Normalizer
+import java.util.UUID
 
 /**
  * Manages health center entities with slug generation and lifecycle operations.
@@ -63,35 +65,17 @@ class HealthCenterService(
         return saved.toResponse()
     }
 
-    /**
-     * Get all active health centers.
-     *
-     * @return list of active health center response DTOs
-     */
     fun getAllHealthCenters(): List<HealthCenterResponse> {
         return healthCenterRepository.findByIsActiveTrue()
             .map { it.toResponse() }
     }
 
-    /**
-     * Find a health center by its unique slug.
-     *
-     * @param slug the unique slug identifier
-     * @return the health center as a response DTO
-     * @throws EntityNotFoundException if no health center matches the slug
-     */
     fun getBySlug(slug: String): HealthCenterResponse {
         val healthCenter = healthCenterRepository.findBySlug(slug)
             ?: throw EntityNotFoundException("Health center not found with slug: $slug")
         return healthCenter.toResponse()
     }
 
-    /**
-     * Find all health centers in a given department.
-     *
-     * @param department the Peru department to filter by
-     * @return list of health center response DTOs in that department
-     */
     fun getByDepartment(department: PeruDepartment): List<HealthCenterResponse> {
         return healthCenterRepository.findByDepartment(department)
             .map { it.toResponse() }
@@ -107,7 +91,7 @@ class HealthCenterService(
      * @throws EntityNotFoundException if no health center matches the ID
      */
     @Transactional
-    fun deactivateHealthCenter(id: Long): HealthCenterResponse {
+    fun deactivateHealthCenter(id: UUID): HealthCenterResponse {
         val healthCenter = healthCenterRepository.findById(id)
             .orElseThrow { EntityNotFoundException("Health center not found with id: $id") }
 
@@ -119,6 +103,48 @@ class HealthCenterService(
         healthCenter.isActive = false
         val saved = healthCenterRepository.save(healthCenter)
         logger.info("Deactivated health center: id={}, name={}", saved.id, saved.name)
+        return saved.toResponse()
+    }
+
+    fun getById(id: UUID): HealthCenterResponse {
+        val hc = healthCenterRepository.findById(id)
+            .orElseThrow { EntityNotFoundException("Health center not found with id: $id") }
+        return hc.toResponse()
+    }
+
+    @Transactional
+    fun updateHealthCenter(id: UUID, request: UpdateHealthCenterRequest): HealthCenterResponse {
+        val hc = healthCenterRepository.findById(id)
+            .orElseThrow { EntityNotFoundException("Health center not found with id: $id") }
+
+        request.name?.let { newName ->
+            val newSlug = generateSlug(newName)
+            if (newSlug != hc.slug && healthCenterRepository.existsBySlug(newSlug)) {
+                throw IllegalStateException("A health center with name '$newName' already exists")
+            }
+            hc.name = newName
+            hc.slug = newSlug
+        }
+
+        request.department?.let { hc.department = it }
+
+        val saved = healthCenterRepository.save(hc)
+        logger.info("Updated health center: id={}, name={}, slug={}", saved.id, saved.name, saved.slug)
+        return saved.toResponse()
+    }
+
+    @Transactional
+    fun reactivateHealthCenter(id: UUID): HealthCenterResponse {
+        val hc = healthCenterRepository.findById(id)
+            .orElseThrow { EntityNotFoundException("Health center not found with id: $id") }
+
+        if (hc.isActive) {
+            throw IllegalStateException("Health center is already active")
+        }
+
+        hc.isActive = true
+        val saved = healthCenterRepository.save(hc)
+        logger.info("Reactivated health center: id={}, name={}", saved.id, saved.name)
         return saved.toResponse()
     }
 
@@ -145,9 +171,6 @@ class HealthCenterService(
             .trim('-')
     }
 
-    /**
-     * Map entity to response DTO.
-     */
     private fun HealthCenter.toResponse(): HealthCenterResponse = HealthCenterResponse(
         id = id!!,
         name = name,

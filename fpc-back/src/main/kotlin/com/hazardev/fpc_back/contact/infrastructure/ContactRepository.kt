@@ -6,11 +6,11 @@ import org.springframework.stereotype.Repository
 import java.util.UUID
 
 @Repository
-interface ContactRepository : JpaRepository<Contact, Long> {
+interface ContactRepository : JpaRepository<Contact, UUID> {
 
-    fun findByPatientId(patientId: Long): List<Contact>
+    fun findByPatientId(patientId: UUID): List<Contact>
 
-    fun findByPatientIdOrderByCreatedAtDesc(patientId: Long): List<Contact>
+    fun findByPatientIdOrderByCreatedAtDesc(patientId: UUID): List<Contact>
 
     fun findByAgentId(agentId: UUID): List<Contact>
 }

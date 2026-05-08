@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS patient_medical_appointments (
-    id BIGSERIAL PRIMARY KEY,
-    patient_id BIGINT NOT NULL,
-    contact_id BIGINT NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL,
+    contact_id UUID NOT NULL,
     health_establishment VARCHAR(255),
     specialty VARCHAR(255),
     appointment_date DATE,

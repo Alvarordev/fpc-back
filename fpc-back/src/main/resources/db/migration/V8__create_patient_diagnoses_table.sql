@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS patient_diagnoses (
-    id BIGSERIAL PRIMARY KEY,
-    patient_id BIGINT NOT NULL,
-    contact_id BIGINT NOT NULL,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL,
+    contact_id UUID NOT NULL,
     diagnosis TEXT NOT NULL,
     cancer_stage VARCHAR(20)
         CHECK (cancer_stage IS NULL OR cancer_stage IN (

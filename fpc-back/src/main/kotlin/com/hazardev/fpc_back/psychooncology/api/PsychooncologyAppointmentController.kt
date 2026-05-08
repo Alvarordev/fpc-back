@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/psychooncology-appointments")
@@ -27,8 +28,8 @@ class PsychooncologyAppointmentController(
 
     @GetMapping
     fun listAppointments(
-        @RequestParam(required = false) patientId: Long?,
-        @RequestParam(required = false) volunteerId: Long?,
+        @RequestParam(required = false) patientId: UUID?,
+        @RequestParam(required = false) volunteerId: UUID?,
         @RequestParam(required = false) upcoming: Boolean?
     ): List<PsychooncologyAppointmentResponse> {
         return when {
@@ -40,7 +41,7 @@ class PsychooncologyAppointmentController(
     }
 
     @GetMapping("/{id}")
-    fun getById(@PathVariable id: Long): PsychooncologyAppointmentResponse {
+    fun getById(@PathVariable id: UUID): PsychooncologyAppointmentResponse {
         return appointmentService.getById(id).toResponse()
     }
 
@@ -56,7 +57,7 @@ class PsychooncologyAppointmentController(
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     fun updateAppointment(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: UpdateAppointmentRequest
     ): PsychooncologyAppointmentResponse {
         return appointmentService.updateAppointment(id, request).toResponse()
@@ -64,21 +65,21 @@ class PsychooncologyAppointmentController(
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    fun deleteAppointment(@PathVariable id: Long): ResponseEntity<Void> {
+    fun deleteAppointment(@PathVariable id: UUID): ResponseEntity<Void> {
         appointmentService.deleteAppointment(id)
         return ResponseEntity.noContent().build()
     }
 
     @PostMapping("/{id}/complete")
     fun completeAppointment(
-        @PathVariable id: Long,
+        @PathVariable id: UUID,
         @RequestBody request: CompleteAppointmentRequest
     ): PsychooncologyAppointmentResponse {
         return appointmentService.completeAppointment(id, request)
     }
 
     @PostMapping("/{id}/cancel")
-    fun cancelAppointment(@PathVariable id: Long): ResponseEntity<Void> {
+    fun cancelAppointment(@PathVariable id: UUID): ResponseEntity<Void> {
         appointmentService.cancelAppointment(id)
         return ResponseEntity.ok().build()
     }

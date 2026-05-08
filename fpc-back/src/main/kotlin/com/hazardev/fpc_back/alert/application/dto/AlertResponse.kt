@@ -5,10 +5,10 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 data class AlertResponse(
-    val id: Long,
-    val healthCenterId: Long,
+    val id: UUID,
+    val healthCenterId: UUID,
     val healthCenterName: String,
-    val contactId: Long,
+    val contactId: UUID,
     val createdByAgentId: UUID,
     val createdByAgentName: String,
     val description: String,

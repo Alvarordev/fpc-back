@@ -1,6 +1,7 @@
 package com.hazardev.fpc_back.patient.application.dto
 
 import com.hazardev.fpc_back.shared.domain.PatientStatus
+import java.util.UUID
 
 /**
  * Request DTOs specifically for the PatientController layer.
@@ -12,6 +13,6 @@ data class ChangeStatusRequest(
 )
 
 data class LinkCompanionRequest(
-    val companionId: Long,
+    val companionId: UUID,
     val isPrimaryInformant: Boolean = false
 )
