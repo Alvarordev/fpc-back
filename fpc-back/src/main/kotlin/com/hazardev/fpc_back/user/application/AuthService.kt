@@ -42,8 +42,8 @@ class AuthService(
                 email = user.email,
                 role = user.role,
                 isActive = user.isActive,
-                createdAt = user.createdAt,
-                updatedAt = user.updatedAt
+                createdAt = user.createdAt!!,
+                updatedAt = user.updatedAt!!
             )
         )
     }
@@ -74,8 +74,8 @@ class AuthService(
                 email = user.email,
                 role = user.role,
                 isActive = user.isActive,
-                createdAt = user.createdAt,
-                updatedAt = user.updatedAt
+                createdAt = user.createdAt!!,
+                updatedAt = user.updatedAt!!
             )
         )
     }
