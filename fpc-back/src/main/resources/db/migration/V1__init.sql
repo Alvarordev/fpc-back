@@ -1,2 +1,0 @@
--- Initial Flyway baseline migration for fpc_db
--- Schema changes will be applied through subsequent versioned migrations
