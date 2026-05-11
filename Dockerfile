@@ -2,16 +2,13 @@ FROM gradle:8.12.1-jdk21 AS builder
 
 WORKDIR /workspace
 
-COPY gradlew .
-COPY gradle/wrapper/ gradle/wrapper/
 COPY build.gradle.kts .
 COPY settings.gradle.kts .
 
-RUN chmod +x gradlew
-RUN ./gradlew dependencies --no-daemon -q
+RUN gradle dependencies --no-daemon -q
 
 COPY src/ src/
-RUN chmod +x gradlew && ./gradlew bootJar --no-daemon
+RUN gradle bootJar --no-daemon
 
 FROM eclipse-temurin:21-jre-noble
 
