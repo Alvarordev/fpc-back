@@ -39,6 +39,9 @@ out/
 ### Kotlin ###
 .kotlin
 
+### Secrets ###
+.env
+
 ### Agent Teams ###
 .atl/
 exploration.md
