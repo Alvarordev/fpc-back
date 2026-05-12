@@ -35,6 +35,9 @@ class Patient(
     @Column(name = "primary_phone", nullable = false)
     var primaryPhone: String,
 
+    @Column(name = "gender", nullable = true)
+    var gender: String? = null,
+
     @Column(name = "secondary_phone", nullable = true)
     var secondaryPhone: String? = null,
 

@@ -42,6 +42,9 @@ class PatientSisAffiliation(
     @Column(name = "affiliated_at", nullable = true)
     var affiliatedAt: LocalDateTime? = null,
 
+    @Column(columnDefinition = "TEXT", nullable = true)
+    var comments: String? = null,
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: LocalDateTime? = null

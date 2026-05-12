@@ -52,6 +52,12 @@ class PatientDetails(
     @Column(name = "emergency_contact_phone", nullable = true)
     var emergencyContactPhone: String? = null,
 
+    @Column(name = "zone_type", nullable = true)
+    var zoneType: String? = null,
+
+    @Column(name = "emergency_contact_gender", nullable = true)
+    var emergencyContactGender: String? = null,
+
     @Enumerated(EnumType.STRING)
     @Column(name = "education_level", nullable = true)
     var educationLevel: EducationLevel? = null,

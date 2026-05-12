@@ -1,5 +1,6 @@
 package com.hazardev.fpc_back.patient.application.dto
 
+import com.hazardev.fpc_back.shared.domain.AffiliationType
 import com.hazardev.fpc_back.shared.domain.CancerStage
 import com.hazardev.fpc_back.shared.domain.ContactPurpose
 import com.hazardev.fpc_back.shared.domain.ContactStatus
@@ -9,6 +10,7 @@ import com.hazardev.fpc_back.shared.domain.EpsProvider
 import com.hazardev.fpc_back.shared.domain.InsuranceType
 import com.hazardev.fpc_back.shared.domain.PatientRole
 import com.hazardev.fpc_back.shared.domain.PatientStatus
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -33,6 +35,7 @@ data class CreatePatientRequest(
     val primaryPhone: String,
     val secondaryPhone: String? = null,
     val hasWhatsapp: Boolean = false,
+    val gender: String? = null,
     val role: PatientRole = PatientRole.UNKNOWN,
     val status: PatientStatus? = null
 )
@@ -44,6 +47,7 @@ data class UpdatePatientRequest(
     val primaryPhone: String? = null,
     val secondaryPhone: String? = null,
     val hasWhatsapp: Boolean? = null,
+    val gender: String? = null,
     val role: PatientRole? = null
 )
 
@@ -55,6 +59,7 @@ data class PatientResponse(
     val primaryPhone: String,
     val secondaryPhone: String?,
     val hasWhatsapp: Boolean,
+    val gender: String?,
     val role: PatientRole,
     val status: PatientStatus,
     val createdAt: LocalDateTime,
@@ -66,7 +71,9 @@ data class PatientResponse(
     val medicalAppointments: List<MedicalAppointmentResponse>,
     val sisAffiliations: List<SisAffiliationResponse>,
     val companions: List<CompanionResponse>,
-    val contacts: List<ContactResponse>
+    val contacts: List<ContactResponse>,
+    val enrollments: List<EnrollmentMetadataResponse>,
+    val symptomReports: List<SymptomReportResponse>
 )
 
 /**
@@ -82,6 +89,8 @@ data class EnrollPatientRequest(
     val travelTimeToHospital: String? = null,
     val emergencyContactName: String? = null,
     val emergencyContactPhone: String? = null,
+    val zoneType: String? = null,
+    val emergencyContactGender: String? = null,
     val educationLevel: EducationLevel? = null,
     val nativeLanguage: String? = null,
     val requiresTranslation: Boolean = false
@@ -100,6 +109,8 @@ data class EnrollPatientDetailsRequest(
     val travelTimeToHospital: String? = null,
     val emergencyContactName: String? = null,
     val emergencyContactPhone: String? = null,
+    val zoneType: String? = null,
+    val emergencyContactGender: String? = null,
     val educationLevel: EducationLevel? = null,
     val nativeLanguage: String? = null,
     val requiresTranslation: Boolean = false
@@ -114,6 +125,8 @@ data class UpdatePatientDetailsRequest(
     val travelTimeToHospital: String? = null,
     val emergencyContactName: String? = null,
     val emergencyContactPhone: String? = null,
+    val zoneType: String? = null,
+    val emergencyContactGender: String? = null,
     val educationLevel: EducationLevel? = null,
     val nativeLanguage: String? = null,
     val requiresTranslation: Boolean? = null
@@ -130,6 +143,8 @@ data class PatientDetailsResponse(
     val travelTimeToHospital: String?,
     val emergencyContactName: String?,
     val emergencyContactPhone: String?,
+    val zoneType: String?,
+    val emergencyContactGender: String?,
     val educationLevel: EducationLevel?,
     val nativeLanguage: String?,
     val requiresTranslation: Boolean,
@@ -202,6 +217,7 @@ data class AddTreatmentRequest(
     val isCurrent: Boolean,
     val changeReason: String? = null,
     val notReceivingReason: String? = null,
+    val treatmentSituation: String? = null,
     val contactId: UUID
 )
 
@@ -218,6 +234,7 @@ data class TreatmentRecordResponse(
     val isCurrent: Boolean,
     val changeReason: String?,
     val notReceivingReason: String?,
+    val treatmentSituation: String?,
     val createdAt: LocalDateTime,
     val contact: ContactSummary
 )
@@ -230,6 +247,7 @@ data class AddMedicalAppointmentRequest(
     val hasReferralSheet: Boolean = false,
     val referredTo: String? = null,
     val difficulties: String? = null,
+    val isFirstConsultation: Boolean = false,
     val contactId: UUID
 )
 
@@ -244,6 +262,7 @@ data class MedicalAppointmentResponse(
     val hasReferralSheet: Boolean,
     val referredTo: String?,
     val difficulties: String?,
+    val isFirstConsultation: Boolean,
     val createdAt: LocalDateTime,
     val contact: ContactSummary
 )
@@ -252,6 +271,7 @@ data class AddSisAffiliationRequest(
     val canAffiliate: Boolean,
     val expectedDate: LocalDate? = null,
     val cantAffiliateReason: String? = null,
+    val comments: String? = null,
     val contactId: UUID
 )
 
@@ -262,6 +282,7 @@ data class SisAffiliationResponse(
     val canAffiliate: Boolean,
     val expectedDate: LocalDate?,
     val cantAffiliateReason: String?,
+    val comments: String?,
     val affiliatedAt: LocalDateTime?,
     val createdAt: LocalDateTime
 )
@@ -313,5 +334,91 @@ data class FullEnrollmentRequest(
     val medicalAppointments: List<AddMedicalAppointmentRequest>?,
     val sisAffiliation: AddSisAffiliationRequest?,
     val companions: List<LinkCompanionRequest>?,
+    val enrollmentMetadata: EnrollmentMetadataRequest? = null,
+    val symptomReport: SymptomReportRequest? = null,
     val contactId: UUID?
+)
+
+/**
+ * Request DTO for enrollment wizard metadata.
+ *
+ * Fields like [caseComments], [startTime], [endTime], and [agentId] are used
+ * for the enrollment Contact lifecycle. The remaining fields map to the
+ * [com.hazardev.fpc_back.patient.domain.Enrollment] entity.
+ */
+data class EnrollmentMetadataRequest(
+    val caseComments: String? = null,
+    val startTime: Instant? = null,
+    val endTime: Instant? = null,
+    val dataPolicyAccepted: Boolean = false,
+    val informedConsentAccepted: Boolean = false,
+    val affiliationType: AffiliationType = AffiliationType.PATIENT,
+    val isOncologicalPatient: Boolean = false,
+    val programEntryPoint: String? = null,
+    val currentlyAttendingConsultations: Boolean? = null,
+    val currentlyReceivingTreatment: Boolean? = null,
+    val surveyAccepted: Boolean = false,
+    val agentId: UUID? = null
+)
+
+/**
+ * Response DTO for an enrollment record.
+ * Mirrors the [com.hazardev.fpc_back.patient.domain.Enrollment] entity fields
+ * plus relational identifiers.
+ */
+data class EnrollmentMetadataResponse(
+    val id: UUID,
+    val patientId: UUID,
+    val contactId: UUID,
+    val currentlyAttendingConsultations: Boolean?,
+    val currentlyReceivingTreatment: Boolean?,
+    val entrySource: String?,
+    val entrySubSource: String?,
+    val consentToContact: Boolean?,
+    val consentToShareData: Boolean?,
+    val affiliationType: AffiliationType?,
+    val affiliatedPatientName: String?,
+    val affiliatedPatientDni: String?,
+    val requiresTransportation: Boolean?,
+    val hasMobilityIssues: Boolean?,
+    val isOncologicalPatient: Boolean,
+    val surveyAccepted: Boolean,
+    val createdAt: LocalDateTime
+)
+
+/**
+ * Request DTO for wizard symptom report data.
+ */
+data class SymptomReportRequest(
+    val hasDiscomfort: Boolean = false,
+    val signsAndSymptoms: String? = null,
+    val hasSoughtMedicalConsultation: Boolean = false,
+    val healthCenterId: UUID? = null,
+    val specialty: String? = null,
+    val firstConsultationDetails: String? = null,
+    val indicationsReceived: String? = null
+)
+
+/**
+ * Response DTO for a patient symptom report.
+ * Mirrors the [com.hazardev.fpc_back.patient.domain.PatientSymptomReport] entity fields
+ * plus relational identifiers.
+ */
+data class SymptomReportResponse(
+    val id: UUID,
+    val patientId: UUID,
+    val contactId: UUID,
+    val enrollmentId: UUID?,
+    val discomfortSeverity: String?,
+    val discomfortDescription: String?,
+    val symptomDuration: String?,
+    val symptomFrequency: String?,
+    val isPainPresent: Boolean?,
+    val painIntensity: Int?,
+    val painLocation: String?,
+    val painDescription: String?,
+    val hasSoughtMedicalConsultation: Boolean,
+    val healthCenterId: UUID?,
+    val specialty: String?,
+    val createdAt: LocalDateTime
 )

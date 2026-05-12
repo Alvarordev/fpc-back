@@ -53,6 +53,9 @@ class PatientMedicalAppointment(
     @Column(nullable = true)
     var difficulties: String? = null,
 
+    @Column(name = "is_first_consultation", nullable = false)
+    var isFirstConsultation: Boolean = false,
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: LocalDateTime? = null

@@ -1,5 +1,6 @@
 package com.hazardev.fpc_back.patient.application
 
+import com.hazardev.fpc_back.agent.infrastructure.AgentRepository
 import com.hazardev.fpc_back.contact.domain.Contact
 import com.hazardev.fpc_back.contact.infrastructure.ContactRepository
 import com.hazardev.fpc_back.healthcenter.infrastructure.HealthCenterRepository
@@ -16,31 +17,43 @@ import com.hazardev.fpc_back.patient.application.dto.DiagnosisRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.DiagnosisSummary
 import com.hazardev.fpc_back.patient.application.dto.EnrollPatientDetailsRequest
 import com.hazardev.fpc_back.patient.application.dto.EnrollPatientRequest
+import com.hazardev.fpc_back.patient.application.dto.EnrollmentMetadataRequest
+import com.hazardev.fpc_back.patient.application.dto.EnrollmentMetadataResponse
 import com.hazardev.fpc_back.patient.application.dto.FullEnrollmentRequest
 import com.hazardev.fpc_back.patient.application.dto.InsuranceRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.MedicalAppointmentResponse
 import com.hazardev.fpc_back.patient.application.dto.PatientDetailsResponse
 import com.hazardev.fpc_back.patient.application.dto.PatientResponse
 import com.hazardev.fpc_back.patient.application.dto.SisAffiliationResponse
+import com.hazardev.fpc_back.patient.application.dto.SymptomReportRequest
+import com.hazardev.fpc_back.patient.application.dto.SymptomReportResponse
 import com.hazardev.fpc_back.patient.application.dto.TreatmentRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.UpdatePatientDetailsRequest
 import com.hazardev.fpc_back.patient.application.dto.UpdatePatientRequest
 import com.hazardev.fpc_back.patient.domain.CompanionPatient
+import com.hazardev.fpc_back.patient.domain.Enrollment
 import com.hazardev.fpc_back.patient.domain.Patient
 import com.hazardev.fpc_back.patient.domain.PatientDetails
 import com.hazardev.fpc_back.patient.domain.PatientDiagnosis
 import com.hazardev.fpc_back.patient.domain.PatientInsurance
 import com.hazardev.fpc_back.patient.domain.PatientMedicalAppointment
 import com.hazardev.fpc_back.patient.domain.PatientSisAffiliation
+import com.hazardev.fpc_back.patient.domain.PatientSymptomReport
 import com.hazardev.fpc_back.patient.domain.PatientTreatment
 import com.hazardev.fpc_back.patient.infrastructure.CompanionPatientRepository
+import com.hazardev.fpc_back.patient.infrastructure.EnrollmentRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientDetailsRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientDiagnosisRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientInsuranceRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientMedicalAppointmentRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientSisAffiliationRepository
+import com.hazardev.fpc_back.patient.infrastructure.PatientSymptomReportRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientTreatmentRepository
+import com.hazardev.fpc_back.shared.domain.AffiliationType
+import com.hazardev.fpc_back.shared.domain.ContactPurpose
+import com.hazardev.fpc_back.shared.domain.ContactStatus
+import com.hazardev.fpc_back.shared.domain.ContactType
 import com.hazardev.fpc_back.shared.domain.InsuranceType
 import com.hazardev.fpc_back.shared.domain.PatientRole
 import com.hazardev.fpc_back.shared.domain.PatientStatus
@@ -48,6 +61,7 @@ import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 
 /**
@@ -77,7 +91,10 @@ class PatientService(
     private val patientSisAffiliationRepository: PatientSisAffiliationRepository,
     private val companionPatientRepository: CompanionPatientRepository,
     private val contactRepository: ContactRepository,
-    private val healthCenterRepository: HealthCenterRepository
+    private val healthCenterRepository: HealthCenterRepository,
+    private val enrollmentRepository: EnrollmentRepository,
+    private val patientSymptomReportRepository: PatientSymptomReportRepository,
+    private val agentRepository: AgentRepository
 ) {
 
     /**
@@ -178,6 +195,7 @@ class PatientService(
         request.primaryPhone?.let { patient.primaryPhone = it }
         request.secondaryPhone?.let { patient.secondaryPhone = it }
         request.hasWhatsapp?.let { patient.hasWhatsapp = it }
+        request.gender?.let { patient.gender = it }
         request.role?.let { patient.role = it }
 
         return patientRepository.save(patient).let { buildPatientResponse(it) }
@@ -274,6 +292,8 @@ class PatientService(
             travelTimeToHospital = request.travelTimeToHospital,
             emergencyContactName = request.emergencyContactName,
             emergencyContactPhone = request.emergencyContactPhone,
+            zoneType = request.zoneType,
+            emergencyContactGender = request.emergencyContactGender,
             educationLevel = request.educationLevel,
             nativeLanguage = request.nativeLanguage,
             requiresTranslation = request.requiresTranslation
@@ -317,6 +337,8 @@ class PatientService(
             travelTimeToHospital?.let { details.travelTimeToHospital = it }
             emergencyContactName?.let { details.emergencyContactName = it }
             emergencyContactPhone?.let { details.emergencyContactPhone = it }
+            zoneType?.let { details.zoneType = it }
+            emergencyContactGender?.let { details.emergencyContactGender = it }
             educationLevel?.let { details.educationLevel = it }
             nativeLanguage?.let { details.nativeLanguage = it }
             requiresTranslation?.let { details.requiresTranslation = it }
@@ -474,7 +496,8 @@ class PatientService(
             endDate = request.endDate,
             isCurrent = request.isCurrent,
             changeReason = request.changeReason,
-            notReceivingReason = request.notReceivingReason
+            notReceivingReason = request.notReceivingReason,
+            treatmentSituation = request.treatmentSituation
         )
 
         patientTreatmentRepository.save(treatment)
@@ -522,7 +545,8 @@ class PatientService(
             nextAppointmentDate = request.nextAppointmentDate,
             hasReferralSheet = request.hasReferralSheet,
             referredTo = request.referredTo,
-            difficulties = request.difficulties
+            difficulties = request.difficulties,
+            isFirstConsultation = request.isFirstConsultation
         )
 
         patientMedicalAppointmentRepository.save(appointment)
@@ -558,7 +582,8 @@ class PatientService(
             contact = contact,
             canAffiliate = request.canAffiliate,
             expectedDate = request.expectedDate,
-            cantAffiliateReason = request.cantAffiliateReason
+            cantAffiliateReason = request.cantAffiliateReason,
+            comments = request.comments
         )
 
         patientSisAffiliationRepository.save(affiliation)
@@ -754,6 +779,7 @@ class PatientService(
                 p.primaryPhone = request.patientData.primaryPhone
                 p.secondaryPhone = request.patientData.secondaryPhone
                 p.hasWhatsapp = request.patientData.hasWhatsapp
+                p.gender = request.patientData.gender
                 p.role = request.patientData.role
             }
             patientRepository.save(p)
@@ -765,6 +791,18 @@ class PatientService(
         }
 
         val patientId = patient.id!!
+
+        // Resolve enrollment contact and persist enrollment + symptom report data
+        val enrollmentContact = resolveEnrollmentContact(patient, request.enrollmentMetadata)
+
+        var enrollment: Enrollment? = null
+        if (request.enrollmentMetadata != null && enrollmentContact != null) {
+            enrollment = saveEnrollment(patient, enrollmentContact, request.enrollmentMetadata)
+        }
+
+        if (request.symptomReport != null && enrollmentContact != null) {
+            saveSymptomReport(patient, enrollmentContact, enrollment, request.symptomReport)
+        }
 
         createOrUpdateDetails(patient, request.details)
 
@@ -832,6 +870,7 @@ class PatientService(
             primaryPhone = request.primaryPhone,
             secondaryPhone = request.secondaryPhone,
             hasWhatsapp = request.hasWhatsapp,
+            gender = request.gender,
             role = request.role,
             status = request.status ?: PatientStatus.PROSPECT
         )
@@ -850,6 +889,8 @@ class PatientService(
                 travelTimeToHospital?.let { existingDetails.travelTimeToHospital = it }
                 emergencyContactName?.let { existingDetails.emergencyContactName = it }
                 emergencyContactPhone?.let { existingDetails.emergencyContactPhone = it }
+                zoneType?.let { existingDetails.zoneType = it }
+                emergencyContactGender?.let { existingDetails.emergencyContactGender = it }
                 educationLevel?.let { existingDetails.educationLevel = it }
                 nativeLanguage?.let { existingDetails.nativeLanguage = it }
                 // requiresTranslation is non-nullable, always apply
@@ -867,6 +908,8 @@ class PatientService(
                 travelTimeToHospital = request.travelTimeToHospital,
                 emergencyContactName = request.emergencyContactName,
                 emergencyContactPhone = request.emergencyContactPhone,
+                zoneType = request.zoneType,
+                emergencyContactGender = request.emergencyContactGender,
                 educationLevel = request.educationLevel,
                 nativeLanguage = request.nativeLanguage,
                 requiresTranslation = request.requiresTranslation
@@ -885,6 +928,111 @@ class PatientService(
             .orElseThrow { EntityNotFoundException("Contact not found with id: $contactId") }
     }
 
+    /**
+     * Resolve the enrollment contact for the patient.
+     *
+     * If a SCHEDULED contact with [ContactPurpose.ENROLLMENT] exists,
+     * transition it to COMPLETED and update its fields. Otherwise, create
+     * a new COMPLETED contact.
+     *
+     * @param patient the patient being enrolled
+     * @param enrollmentData the enrollment metadata (may be null)
+     * @return the resolved Contact, or null if enrollmentData is null
+     */
+    private fun resolveEnrollmentContact(
+        patient: Patient,
+        enrollmentData: EnrollmentMetadataRequest?
+    ): Contact? {
+        if (enrollmentData == null) return null
+
+        val agent = enrollmentData.agentId?.let { agentId ->
+            agentRepository.findById(agentId)
+                .orElseThrow { EntityNotFoundException("Agent not found with id: $agentId") }
+        }
+
+        val scheduledAt = enrollmentData.startTime?.let {
+            LocalDateTime.ofInstant(it, ZoneOffset.UTC)
+        }
+        val completedAt = enrollmentData.endTime?.let {
+            LocalDateTime.ofInstant(it, ZoneOffset.UTC)
+        } ?: LocalDateTime.now()
+
+        // Find any SCHEDULED enrollment contact for this patient
+        val scheduledContact = contactRepository.findByPatientId(patient.id!!)
+            .find { it.purpose == ContactPurpose.ENROLLMENT && it.status == ContactStatus.SCHEDULED }
+
+        return if (scheduledContact != null) {
+            // Transition SCHEDULED → COMPLETED
+            scheduledContact.status = ContactStatus.COMPLETED
+            scheduledContact.completedAt = completedAt
+            if (agent != null) scheduledContact.agent = agent
+            enrollmentData.caseComments?.let { scheduledContact.notes = it }
+            scheduledAt?.let { scheduledContact.scheduledAt = it }
+            contactRepository.save(scheduledContact)
+        } else {
+            // Create new COMPLETED contact
+            val newContact = Contact(
+                patient = patient,
+                agent = agent,
+                type = ContactType.WHATSAPP,
+                status = ContactStatus.COMPLETED,
+                purpose = ContactPurpose.ENROLLMENT,
+                scheduledAt = scheduledAt,
+                completedAt = completedAt,
+                notes = enrollmentData.caseComments
+            )
+            contactRepository.save(newContact)
+        }
+    }
+
+    /**
+     * Create and save an [Enrollment] record linked to the patient and contact.
+     */
+    private fun saveEnrollment(
+        patient: Patient,
+        contact: Contact,
+        enrollmentData: EnrollmentMetadataRequest
+    ): Enrollment {
+        val enrollment = Enrollment(
+            patient = patient,
+            contact = contact,
+            currentlyAttendingConsultations = enrollmentData.currentlyAttendingConsultations,
+            currentlyReceivingTreatment = enrollmentData.currentlyReceivingTreatment,
+            entrySource = enrollmentData.programEntryPoint,
+            consentToContact = enrollmentData.dataPolicyAccepted,
+            consentToShareData = enrollmentData.informedConsentAccepted,
+            affiliationType = enrollmentData.affiliationType,
+            isOncologicalPatient = enrollmentData.isOncologicalPatient,
+            surveyAccepted = enrollmentData.surveyAccepted
+        )
+        return enrollmentRepository.save(enrollment)
+    }
+
+    /**
+     * Create and save a [PatientSymptomReport] linked to the patient, contact,
+     * and optionally the enrollment.
+     */
+    private fun saveSymptomReport(
+        patient: Patient,
+        contact: Contact,
+        enrollment: Enrollment?,
+        symptomData: SymptomReportRequest
+    ): PatientSymptomReport {
+        val report = PatientSymptomReport(
+            patient = patient,
+            contact = contact,
+            enrollment = enrollment,
+            isPainPresent = symptomData.hasDiscomfort.takeIf { it },
+            discomfortDescription = symptomData.signsAndSymptoms,
+            painDescription = symptomData.firstConsultationDetails,
+            discomfortSeverity = symptomData.indicationsReceived,
+            hasSoughtMedicalConsultation = symptomData.hasSoughtMedicalConsultation,
+            healthCenterId = symptomData.healthCenterId,
+            specialty = symptomData.specialty
+        )
+        return patientSymptomReportRepository.save(report)
+    }
+
     private fun buildPatientResponse(patient: Patient): PatientResponse {
         val patientId = patient.id!!
 
@@ -896,6 +1044,8 @@ class PatientService(
         val sisAffiliations = patientSisAffiliationRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
         val companions = companionPatientRepository.findByPatientId(patientId)
         val contacts = contactRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
+        val enrollments = enrollmentRepository.findByPatientId(patientId)
+        val symptomReports = patientSymptomReportRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
 
         return PatientResponse(
             id = patientId,
@@ -905,6 +1055,7 @@ class PatientService(
             primaryPhone = patient.primaryPhone,
             secondaryPhone = patient.secondaryPhone,
             hasWhatsapp = patient.hasWhatsapp,
+            gender = patient.gender,
             role = patient.role,
             status = patient.status,
             createdAt = patient.createdAt!!,
@@ -916,7 +1067,9 @@ class PatientService(
             medicalAppointments = medicalAppointments.map { it.toResponse() },
             sisAffiliations = sisAffiliations.map { it.toResponse() },
             companions = companions.map { it.toCompanionResponse() },
-            contacts = contacts.map { it.toResponse() }
+            contacts = contacts.map { it.toResponse() },
+            enrollments = enrollments.map { it.toResponse() },
+            symptomReports = symptomReports.map { it.toResponse() }
         )
     }
 
@@ -932,6 +1085,8 @@ class PatientService(
         travelTimeToHospital = travelTimeToHospital,
         emergencyContactName = emergencyContactName,
         emergencyContactPhone = emergencyContactPhone,
+        zoneType = zoneType,
+        emergencyContactGender = emergencyContactGender,
         educationLevel = educationLevel,
         nativeLanguage = nativeLanguage,
         requiresTranslation = requiresTranslation,
@@ -986,6 +1141,7 @@ class PatientService(
         isCurrent = isCurrent,
         changeReason = changeReason,
         notReceivingReason = notReceivingReason,
+        treatmentSituation = treatmentSituation,
         createdAt = createdAt!!,
         contact = contact.toSummary()
     )
@@ -1002,6 +1158,7 @@ class PatientService(
             hasReferralSheet = hasReferralSheet,
             referredTo = referredTo,
             difficulties = difficulties,
+            isFirstConsultation = isFirstConsultation,
             createdAt = createdAt!!,
             contact = contact.toSummary()
         )
@@ -1013,7 +1170,47 @@ class PatientService(
         canAffiliate = canAffiliate,
         expectedDate = expectedDate,
         cantAffiliateReason = cantAffiliateReason,
+        comments = comments,
         affiliatedAt = affiliatedAt,
+        createdAt = createdAt!!
+    )
+
+    private fun Enrollment.toResponse(): EnrollmentMetadataResponse = EnrollmentMetadataResponse(
+        id = id!!,
+        patientId = patient.id!!,
+        contactId = contact.id!!,
+        currentlyAttendingConsultations = currentlyAttendingConsultations,
+        currentlyReceivingTreatment = currentlyReceivingTreatment,
+        entrySource = entrySource,
+        entrySubSource = entrySubSource,
+        consentToContact = consentToContact,
+        consentToShareData = consentToShareData,
+        affiliationType = affiliationType,
+        affiliatedPatientName = affiliatedPatientName,
+        affiliatedPatientDni = affiliatedPatientDni,
+        requiresTransportation = requiresTransportation,
+        hasMobilityIssues = hasMobilityIssues,
+        isOncologicalPatient = isOncologicalPatient,
+        surveyAccepted = surveyAccepted,
+        createdAt = createdAt!!
+    )
+
+    private fun PatientSymptomReport.toResponse(): SymptomReportResponse = SymptomReportResponse(
+        id = id!!,
+        patientId = patient.id!!,
+        contactId = contact.id!!,
+        enrollmentId = enrollment?.id,
+        discomfortSeverity = discomfortSeverity,
+        discomfortDescription = discomfortDescription,
+        symptomDuration = symptomDuration,
+        symptomFrequency = symptomFrequency,
+        isPainPresent = isPainPresent,
+        painIntensity = painIntensity,
+        painLocation = painLocation,
+        painDescription = painDescription,
+        hasSoughtMedicalConsultation = hasSoughtMedicalConsultation,
+        healthCenterId = healthCenterId,
+        specialty = specialty,
         createdAt = createdAt!!
     )
 
