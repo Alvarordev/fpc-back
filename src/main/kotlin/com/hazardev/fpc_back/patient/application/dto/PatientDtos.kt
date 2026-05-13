@@ -96,25 +96,25 @@ data class EnrollPatientRequest(
     val requiresTranslation: Boolean = false
 )
 
-/**
- * Request with PatientDetails fields for full enrollment flow.
- * Mirrors [EnrollPatientRequest] but used as a sub-object of [FullEnrollmentRequest].
- */
-data class EnrollPatientDetailsRequest(
-    val birthDepartment: String? = null,
-    val currentAddress: String? = null,
-    val currentDistrict: String? = null,
-    val currentDepartment: String? = null,
-    val dniMatchesAddress: Boolean? = null,
-    val travelTimeToHospital: String? = null,
-    val emergencyContactName: String? = null,
-    val emergencyContactPhone: String? = null,
-    val zoneType: String? = null,
-    val emergencyContactGender: String? = null,
-    val educationLevel: EducationLevel? = null,
-    val nativeLanguage: String? = null,
-    val requiresTranslation: Boolean = false
-)
+    /**
+     * Request with PatientDetails fields for full enrollment flow.
+     * Mirrors [EnrollPatientRequest] but used as a sub-object of [FullEnrollmentRequest].
+     */
+    data class EnrollPatientDetailsRequest(
+        val birthDepartment: String? = null,
+        val currentAddress: String? = null,
+        val currentDistrict: String? = null,
+        val currentDepartment: String? = null,
+        val dniMatchesAddress: Boolean? = null,
+        val travelTimeToHospital: String? = null,
+        val emergencyContactName: String? = null,
+        val emergencyContactPhone: String? = null,
+        val zoneType: String? = null,
+        val emergencyContactGender: String? = null,
+        val educationLevel: EducationLevel? = null,
+        val nativeLanguage: String? = null,
+        val requiresTranslation: Boolean = false
+    )
 
 data class UpdatePatientDetailsRequest(
     val birthDepartment: String? = null,
@@ -159,7 +159,7 @@ data class AddInsuranceRequest(
     val changeReason: String? = null,
     val startDate: LocalDate? = null,
     val endDate: LocalDate? = null,
-    val contactId: UUID
+    val contactId: UUID? = null
 )
 
 data class InsuranceRecordResponse(
@@ -186,7 +186,7 @@ data class AddDiagnosisRequest(
     val hasMedicalReport: Boolean = false,
     val isCurrent: Boolean,
     val changeReason: String? = null,
-    val contactId: UUID
+    val contactId: UUID? = null
 )
 
 data class DiagnosisRecordResponse(
@@ -218,7 +218,7 @@ data class AddTreatmentRequest(
     val changeReason: String? = null,
     val notReceivingReason: String? = null,
     val treatmentSituation: String? = null,
-    val contactId: UUID
+    val contactId: UUID? = null
 )
 
 data class TreatmentRecordResponse(
@@ -248,7 +248,7 @@ data class AddMedicalAppointmentRequest(
     val referredTo: String? = null,
     val difficulties: String? = null,
     val isFirstConsultation: Boolean = false,
-    val contactId: UUID
+    val contactId: UUID? = null
 )
 
 data class MedicalAppointmentResponse(
@@ -272,7 +272,7 @@ data class AddSisAffiliationRequest(
     val expectedDate: LocalDate? = null,
     val cantAffiliateReason: String? = null,
     val comments: String? = null,
-    val contactId: UUID
+    val contactId: UUID? = null
 )
 
 data class SisAffiliationResponse(
@@ -309,7 +309,8 @@ data class ContactResponse(
  * Composite request for atomically creating/enrolling a patient
  * in a single transaction. All sub-entities (details, insurance,
  * diagnosis, treatment, appointments, SIS, companions) are
- * processed together.
+ * processed together. The enrollment contact is resolved/created
+ * automatically — no contactId is required anywhere in the request.
  *
  * @property patientId If provided, enrolls an existing patient;
  *                     if null, a new patient is created from [patientData]
@@ -322,7 +323,6 @@ data class ContactResponse(
  * @property sisAffiliation Optional SIS affiliation (processed only when
  *                          no real insurance exists)
  * @property companions Optional list of companions to link
- * @property contactId The contact that initiated this enrollment
  */
 data class FullEnrollmentRequest(
     val patientId: UUID?,
@@ -335,8 +335,7 @@ data class FullEnrollmentRequest(
     val sisAffiliation: AddSisAffiliationRequest?,
     val companions: List<LinkCompanionRequest>?,
     val enrollmentMetadata: EnrollmentMetadataRequest? = null,
-    val symptomReport: SymptomReportRequest? = null,
-    val contactId: UUID?
+    val symptomReport: SymptomReportRequest? = null
 )
 
 /**

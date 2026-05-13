@@ -360,6 +360,7 @@ class PatientService(
      * @throws EntityNotFoundException if the patient or contact does not exist
      */
     fun addInsurance(patientId: UUID, request: AddInsuranceRequest): PatientResponse {
+        requireNotNull(request.contactId) { "contactId is required" }
         val patient = findPatientOrThrow(patientId)
         val contact = findContactOrThrow(request.contactId)
 
@@ -407,6 +408,7 @@ class PatientService(
      * @throws EntityNotFoundException if the patient, contact, or health center does not exist
      */
     fun addDiagnosis(patientId: UUID, request: AddDiagnosisRequest): PatientResponse {
+        requireNotNull(request.contactId) { "contactId is required" }
         val patient = findPatientOrThrow(patientId)
         val contact = findContactOrThrow(request.contactId)
 
@@ -463,6 +465,7 @@ class PatientService(
      * @throws EntityNotFoundException if any referenced entity does not exist
      */
     fun addTreatment(patientId: UUID, request: AddTreatmentRequest): PatientResponse {
+        requireNotNull(request.contactId) { "contactId is required" }
         val patient = findPatientOrThrow(patientId)
         val contact = findContactOrThrow(request.contactId)
         val diagnosis = patientDiagnosisRepository.findById(request.diagnosisId)
@@ -528,6 +531,7 @@ class PatientService(
         patientId: UUID,
         request: AddMedicalAppointmentRequest
     ): PatientResponse {
+        requireNotNull(request.contactId) { "contactId is required" }
         val patient = findPatientOrThrow(patientId)
         val contact = findContactOrThrow(request.contactId)
 
@@ -574,6 +578,7 @@ class PatientService(
      * @throws EntityNotFoundException if the patient or contact does not exist
      */
     fun addSisAffiliation(patientId: UUID, request: AddSisAffiliationRequest): PatientResponse {
+        requireNotNull(request.contactId) { "contactId is required" }
         val patient = findPatientOrThrow(patientId)
         val contact = findContactOrThrow(request.contactId)
 
@@ -792,40 +797,61 @@ class PatientService(
 
         val patientId = patient.id!!
 
-        // Resolve enrollment contact and persist enrollment + symptom report data
+        // Resolve or create enrollment contact — always available for sub-entities
         val enrollmentContact = resolveEnrollmentContact(patient, request.enrollmentMetadata)
 
         var enrollment: Enrollment? = null
-        if (request.enrollmentMetadata != null && enrollmentContact != null) {
+        if (request.enrollmentMetadata != null) {
             enrollment = saveEnrollment(patient, enrollmentContact, request.enrollmentMetadata)
         }
 
-        if (request.symptomReport != null && enrollmentContact != null) {
+        if (request.symptomReport != null) {
             saveSymptomReport(patient, enrollmentContact, enrollment, request.symptomReport)
         }
 
         createOrUpdateDetails(patient, request.details)
 
         if (request.insurance != null) {
-            addInsurance(patientId, request.insurance)
+            addInsurance(patientId, request.insurance.copy(contactId = enrollmentContact.id!!))
         }
 
+        // Capture diagnosis ID so treatment can reference the newly-created diagnosis
+        var diagnosisId: UUID? = null
         if (request.diagnosis != null) {
-            addDiagnosis(patientId, request.diagnosis)
+            val diagnosisResponse = addDiagnosis(
+                patientId,
+                request.diagnosis.copy(contactId = enrollmentContact.id!!)
+            )
+            diagnosisId = diagnosisResponse.diagnoses.firstOrNull()?.id
+                ?: throw IllegalStateException("Failed to create diagnosis — no diagnosis found in response")
         }
 
         if (request.treatment != null) {
-            addTreatment(patientId, request.treatment)
+            // Use newly-created diagnosis ID if available, otherwise keep the one from the request
+            val treatmentDiagnosisId = diagnosisId ?: request.treatment.diagnosisId
+            addTreatment(
+                patientId,
+                request.treatment.copy(
+                    contactId = enrollmentContact.id!!,
+                    diagnosisId = treatmentDiagnosisId
+                )
+            )
         }
 
         request.medicalAppointments?.forEach { appointment ->
-            addMedicalAppointment(patientId, appointment)
+            addMedicalAppointment(
+                patientId,
+                appointment.copy(contactId = enrollmentContact.id!!)
+            )
         }
 
         val hasNoRealInsurance = request.insurance == null ||
             request.insurance.insuranceType == InsuranceType.NONE
         if (hasNoRealInsurance && request.sisAffiliation != null) {
-            addSisAffiliation(patientId, request.sisAffiliation)
+            addSisAffiliation(
+                patientId,
+                request.sisAffiliation.copy(contactId = enrollmentContact.id!!)
+            )
         }
 
         request.companions?.forEach { companion ->
@@ -935,25 +961,27 @@ class PatientService(
      * transition it to COMPLETED and update its fields. Otherwise, create
      * a new COMPLETED contact.
      *
+     * When [enrollmentData] is null, still looks for an existing SCHEDULED
+     * enrollment contact to upgrade, or creates a minimal contact so that
+     * sub-entity operations always have a valid contact reference.
+     *
      * @param patient the patient being enrolled
      * @param enrollmentData the enrollment metadata (may be null)
-     * @return the resolved Contact, or null if enrollmentData is null
+     * @return the resolved Contact — never null
      */
     private fun resolveEnrollmentContact(
         patient: Patient,
         enrollmentData: EnrollmentMetadataRequest?
-    ): Contact? {
-        if (enrollmentData == null) return null
-
-        val agent = enrollmentData.agentId?.let { agentId ->
+    ): Contact {
+        val agent = enrollmentData?.agentId?.let { agentId ->
             agentRepository.findById(agentId)
                 .orElseThrow { EntityNotFoundException("Agent not found with id: $agentId") }
         }
 
-        val scheduledAt = enrollmentData.startTime?.let {
+        val scheduledAt = enrollmentData?.startTime?.let {
             LocalDateTime.ofInstant(it, ZoneOffset.UTC)
         }
-        val completedAt = enrollmentData.endTime?.let {
+        val completedAt = enrollmentData?.endTime?.let {
             LocalDateTime.ofInstant(it, ZoneOffset.UTC)
         } ?: LocalDateTime.now()
 
@@ -966,7 +994,7 @@ class PatientService(
             scheduledContact.status = ContactStatus.COMPLETED
             scheduledContact.completedAt = completedAt
             if (agent != null) scheduledContact.agent = agent
-            enrollmentData.caseComments?.let { scheduledContact.notes = it }
+            enrollmentData?.caseComments?.let { scheduledContact.notes = it }
             scheduledAt?.let { scheduledContact.scheduledAt = it }
             contactRepository.save(scheduledContact)
         } else {
@@ -979,7 +1007,7 @@ class PatientService(
                 purpose = ContactPurpose.ENROLLMENT,
                 scheduledAt = scheduledAt,
                 completedAt = completedAt,
-                notes = enrollmentData.caseComments
+                notes = enrollmentData?.caseComments
             )
             contactRepository.save(newContact)
         }
