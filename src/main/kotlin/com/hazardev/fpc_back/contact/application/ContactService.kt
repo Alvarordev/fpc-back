@@ -104,8 +104,8 @@ class ContactService(
     }
 
     private fun Contact.toResponse(): ContactResponse = ContactResponse(
-        id = id!!,
-        patientId = patient.id!!,
+        id = id ?: throw IllegalStateException("Contact ID is null after save"),
+        patientId = patient.id ?: throw IllegalStateException("Patient ID is null on contact"),
         agentId = agent?.id,
         type = type,
         status = status,
@@ -114,7 +114,7 @@ class ContactService(
         completedAt = completedAt,
         notes = notes,
         scheduledNextContactId = scheduledNextContact?.id,
-        createdAt = createdAt!!,
-        updatedAt = updatedAt!!
+        createdAt = createdAt ?: throw IllegalStateException("createdAt is null on contact"),
+        updatedAt = updatedAt ?: throw IllegalStateException("updatedAt is null on contact")
     )
 }

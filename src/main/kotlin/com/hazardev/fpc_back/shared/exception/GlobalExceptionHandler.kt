@@ -1,8 +1,11 @@
 package com.hazardev.fpc_back.shared.exception
 
+import com.fasterxml.jackson.databind.exc.InvalidFormatException
 import jakarta.persistence.EntityNotFoundException
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.security.access.AccessDeniedException
 import org.springframework.security.authentication.BadCredentialsException
 import org.springframework.security.core.AuthenticationException
@@ -67,6 +70,40 @@ class GlobalExceptionHandler {
                     status = 400,
                     error = "Bad Request",
                     message = ex.message ?: "Invalid request",
+                    path = extractPath(request)
+                )
+            )
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException::class)
+    fun handleMessageNotReadable(ex: HttpMessageNotReadableException, request: WebRequest): ResponseEntity<ErrorResponse> {
+        val cause = ex.cause
+        val detail = when {
+            cause is InvalidFormatException -> "Invalid value '${cause.value}' for field '${cause.path.joinToString(".") { it.fieldName }}'"
+            else -> ex.message?.substringBefore("\n") ?: "Malformed request body"
+        }
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+            .body(
+                ErrorResponse(
+                    timestamp = Instant.now(),
+                    status = 400,
+                    error = "Bad Request",
+                    message = detail,
+                    path = extractPath(request)
+                )
+            )
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException::class)
+    fun handleDataIntegrity(ex: DataIntegrityViolationException, request: WebRequest): ResponseEntity<ErrorResponse> {
+        val message = ex.mostSpecificCause.message ?: "Data integrity violation"
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(
+                ErrorResponse(
+                    timestamp = Instant.now(),
+                    status = 409,
+                    error = "Conflict",
+                    message = message,
                     path = extractPath(request)
                 )
             )
