@@ -67,7 +67,7 @@ class VolunteerAvailabilityService(
             status = AvailabilityStatus.AVAILABLE
         )
 
-        return availabilityRepository.save(slot).toResponse()
+        return availabilityRepository.saveAndFlush(slot).toResponse()
     }
 
     fun getAvailableSlots(
@@ -106,7 +106,7 @@ class VolunteerAvailabilityService(
         }
 
         slot.status = AvailabilityStatus.RESERVED
-        return availabilityRepository.save(slot).toResponse()
+        return availabilityRepository.saveAndFlush(slot).toResponse()
     }
 
     fun releaseSlot(slotId: UUID): AvailabilitySlotResponse {
@@ -120,7 +120,7 @@ class VolunteerAvailabilityService(
         }
 
         slot.status = AvailabilityStatus.AVAILABLE
-        return availabilityRepository.save(slot).toResponse()
+        return availabilityRepository.saveAndFlush(slot).toResponse()
     }
 
     fun getSlotById(id: UUID): VolunteerAvailability {
@@ -149,8 +149,8 @@ class VolunteerAvailabilityService(
     }
 
     private fun VolunteerAvailability.toResponse(): AvailabilitySlotResponse = AvailabilitySlotResponse(
-        id = id!!,
-        volunteerId = volunteer.id!!,
+        id = id ?: throw IllegalStateException("Availability slot ID is null after save"),
+        volunteerId = volunteer.id ?: throw IllegalStateException("Volunteer ID is null on availability slot"),
         date = date,
         startTime = startTime,
         endTime = endTime,

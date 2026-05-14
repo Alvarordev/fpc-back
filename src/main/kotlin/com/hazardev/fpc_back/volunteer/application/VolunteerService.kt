@@ -36,7 +36,7 @@ class VolunteerService(
             isActive = request.isActive
         )
 
-        return volunteerRepository.save(volunteer).toResponse()
+        return volunteerRepository.saveAndFlush(volunteer).toResponse()
     }
 
     fun getAll(): List<VolunteerResponse> {
@@ -67,7 +67,7 @@ class VolunteerService(
         request.phone?.let { volunteer.phone = it }
         request.isActive?.let { volunteer.isActive = it }
 
-        return volunteerRepository.save(volunteer).toResponse()
+        return volunteerRepository.saveAndFlush(volunteer).toResponse()
     }
 
     @Transactional
@@ -79,8 +79,8 @@ class VolunteerService(
     }
 
     private fun Volunteer.toResponse(): VolunteerResponse = VolunteerResponse(
-        id = id!!,
-        userId = user.id!!,
+        id = id ?: throw IllegalStateException("Volunteer ID is null after save"),
+        userId = user.id ?: throw IllegalStateException("User ID is null on volunteer"),
         firstName = firstName,
         lastName = lastName,
         specialty = specialty,
