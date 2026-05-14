@@ -26,7 +26,7 @@ class VolunteerAvailabilityController(
 ) {
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AGENT', 'VOLUNTEER')")
     fun createSlot(@RequestBody request: CreateSlotRequest): ResponseEntity<AvailabilitySlotResponse> {
         val response = volunteerAvailabilityService.createSlot(request)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
@@ -43,8 +43,8 @@ class VolunteerAvailabilityController(
         }
         return volunteerAvailabilityService.getAllSlotsByVolunteer(volunteerId).map { slot ->
             AvailabilitySlotResponse(
-                id = slot.id!!,
-                volunteerId = slot.volunteer.id!!,
+                id = slot.id ?: throw IllegalStateException("Slot ID is null"),
+                volunteerId = slot.volunteer.id ?: throw IllegalStateException("Volunteer ID is null on slot"),
                 date = slot.date,
                 startTime = slot.startTime,
                 endTime = slot.endTime,
@@ -60,8 +60,8 @@ class VolunteerAvailabilityController(
     ): AvailabilitySlotResponse {
         val slot = volunteerAvailabilityService.getSlotById(id)
         return AvailabilitySlotResponse(
-            id = slot.id!!,
-            volunteerId = slot.volunteer.id!!,
+            id = slot.id ?: throw IllegalStateException("Slot ID is null"),
+            volunteerId = slot.volunteer.id ?: throw IllegalStateException("Volunteer ID is null on slot"),
             date = slot.date,
             startTime = slot.startTime,
             endTime = slot.endTime,
@@ -70,7 +70,7 @@ class VolunteerAvailabilityController(
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AGENT', 'VOLUNTEER')")
     fun updateSlot(
         @PathVariable volunteerId: UUID,
         @PathVariable id: UUID,
@@ -78,8 +78,8 @@ class VolunteerAvailabilityController(
     ): AvailabilitySlotResponse {
         val slot = volunteerAvailabilityService.updateSlot(id, request)
         return AvailabilitySlotResponse(
-            id = slot.id!!,
-            volunteerId = slot.volunteer.id!!,
+            id = slot.id ?: throw IllegalStateException("Slot ID is null after update"),
+            volunteerId = slot.volunteer.id ?: throw IllegalStateException("Volunteer ID is null on slot"),
             date = slot.date,
             startTime = slot.startTime,
             endTime = slot.endTime,
@@ -88,7 +88,7 @@ class VolunteerAvailabilityController(
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AGENT', 'VOLUNTEER')")
     fun deleteSlot(
         @PathVariable volunteerId: UUID,
         @PathVariable id: UUID

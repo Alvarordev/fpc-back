@@ -139,7 +139,7 @@ class VolunteerAvailabilityService(
         request.startTime?.let { slot.startTime = it }
         request.endTime?.let { slot.endTime = it }
         request.status?.let { slot.status = it }
-        return availabilityRepository.save(slot)
+        return availabilityRepository.saveAndFlush(slot)
     }
 
     @Transactional
