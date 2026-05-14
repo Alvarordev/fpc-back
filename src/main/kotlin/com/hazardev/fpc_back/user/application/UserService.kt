@@ -42,7 +42,7 @@ class UserService(
             isActive = true
         )
 
-        return userRepository.save(user).toResponse()
+        return userRepository.saveAndFlush(user).toResponse()
     }
 
     @Transactional
@@ -60,7 +60,7 @@ class UserService(
         request.role?.let { user.role = it }
         request.isActive?.let { user.isActive = it }
 
-        return userRepository.save(user).toResponse()
+        return userRepository.saveAndFlush(user).toResponse()
     }
 
     @Transactional
@@ -72,11 +72,11 @@ class UserService(
     }
 
     private fun User.toResponse(): UserResponse = UserResponse(
-        id = id!!,
+        id = id ?: throw IllegalStateException("User ID is null after save"),
         email = email,
         role = role,
         isActive = isActive,
-        createdAt = createdAt!!,
-        updatedAt = updatedAt!!
+        createdAt = createdAt ?: throw IllegalStateException("createdAt is null on user"),
+        updatedAt = updatedAt ?: throw IllegalStateException("updatedAt is null on user")
     )
 }
