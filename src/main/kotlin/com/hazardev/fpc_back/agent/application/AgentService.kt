@@ -33,7 +33,7 @@ class AgentService(
             phone = request.phone
         )
 
-        return agentRepository.save(agent).toResponse()
+        return agentRepository.saveAndFlush(agent).toResponse()
     }
 
     fun getAgentById(id: UUID): AgentResponse {
@@ -64,7 +64,7 @@ class AgentService(
         request.fullName?.let { agent.fullName = it }
         request.phone?.let { agent.phone = it }
 
-        return agentRepository.save(agent).toResponse()
+        return agentRepository.saveAndFlush(agent).toResponse()
     }
 
     @Transactional
@@ -76,10 +76,10 @@ class AgentService(
     }
 
     private fun Agent.toResponse(): AgentResponse = AgentResponse(
-        id = id!!,
-        userId = user.id!!,
+        id = id ?: throw IllegalStateException("Agent ID is null after save"),
+        userId = user.id ?: throw IllegalStateException("User ID is null on agent"),
         fullName = fullName,
         phone = phone,
-        createdAt = createdAt!!
+        createdAt = createdAt ?: throw IllegalStateException("createdAt is null on agent")
     )
 }

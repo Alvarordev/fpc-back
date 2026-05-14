@@ -93,7 +93,7 @@ class PsychooncologyAppointmentService(
             scheduledAt = request.scheduledAt
         )
 
-        return appointmentRepository.save(appointment).toResponse()
+        return appointmentRepository.saveAndFlush(appointment).toResponse()
     }
 
     /**
@@ -132,7 +132,7 @@ class PsychooncologyAppointmentService(
             completedAt = LocalDateTime.now()
         }
 
-        return appointmentRepository.save(appointment).toResponse()
+        return appointmentRepository.saveAndFlush(appointment).toResponse()
     }
 
     /**
@@ -292,11 +292,11 @@ class PsychooncologyAppointmentService(
 
     private fun PsychooncologyAppointment.toResponse(): PsychooncologyAppointmentResponse =
         PsychooncologyAppointmentResponse(
-            id = id!!,
-            patientId = patient.id!!,
-            volunteerId = volunteer.id!!,
-            contactId = contact.id!!,
-            availabilityId = availability.id!!,
+            id = id ?: throw IllegalStateException("Appointment ID is null after save"),
+            patientId = patient.id ?: throw IllegalStateException("Patient ID is null on appointment"),
+            volunteerId = volunteer.id ?: throw IllegalStateException("Volunteer ID is null on appointment"),
+            contactId = contact.id ?: throw IllegalStateException("Contact ID is null on appointment"),
+            availabilityId = availability.id ?: throw IllegalStateException("Availability ID is null on appointment"),
             patientEmail = patientEmail,
             sessionNumber = sessionNumber,
             isAdditionalSession = isAdditionalSession,
@@ -309,7 +309,7 @@ class PsychooncologyAppointmentService(
             additionalObservations = additionalObservations,
             recommendations = recommendations,
             referral = referral,
-            createdAt = createdAt!!,
-            updatedAt = updatedAt!!
+            createdAt = createdAt ?: throw IllegalStateException("createdAt is null on appointment"),
+            updatedAt = updatedAt ?: throw IllegalStateException("updatedAt is null on appointment")
         )
 }

@@ -78,7 +78,7 @@ class AlertService(
             status = AlertStatus.ACTIVE
         )
 
-        val saved = alertRepository.save(alert)
+        val saved = alertRepository.saveAndFlush(alert)
         logger.info(
             "Created alert: id={}, healthCenterId={}, agentId={}",
             saved.id, healthCenter.id, agent.id
@@ -122,7 +122,7 @@ class AlertService(
         alert.resolvedAt = LocalDateTime.now()
         alert.resolvedBy = agent
 
-        val saved = alertRepository.save(alert)
+        val saved = alertRepository.saveAndFlush(alert)
         logger.info(
             "Resolved alert: id={}, resolvedByAgentId={}",
             saved.id, agent.id
@@ -146,11 +146,11 @@ class AlertService(
     }
 
     private fun Alert.toResponse(): AlertResponse = AlertResponse(
-        id = id!!,
-        healthCenterId = healthCenter.id!!,
+        id = id ?: throw IllegalStateException("Alert ID is null after save"),
+        healthCenterId = healthCenter.id ?: throw IllegalStateException("HealthCenter ID is null on alert"),
         healthCenterName = healthCenter.name,
-        contactId = contact.id!!,
-        createdByAgentId = createdBy.id!!,
+        contactId = contact.id ?: throw IllegalStateException("Contact ID is null on alert"),
+        createdByAgentId = createdBy.id ?: throw IllegalStateException("CreatedBy agent ID is null on alert"),
         createdByAgentName = createdBy.fullName,
         title = title,
         description = description,
@@ -193,7 +193,7 @@ class AlertService(
             alert.contact = contact
         }
 
-        return alertRepository.save(alert).toResponse()
+        return alertRepository.saveAndFlush(alert).toResponse()
     }
 
     @Transactional
