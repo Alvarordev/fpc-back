@@ -46,7 +46,7 @@ class ContactService(
             scheduledNextContact = scheduledNextContact
         )
 
-        return contactRepository.save(contact).toResponse()
+        return contactRepository.saveAndFlush(contact).toResponse()
     }
 
     fun getContactById(id: UUID): ContactResponse {
@@ -92,7 +92,7 @@ class ContactService(
             contact.scheduledNextContact = nextContact
         }
 
-        return contactRepository.save(contact).toResponse()
+        return contactRepository.saveAndFlush(contact).toResponse()
     }
 
     @Transactional
