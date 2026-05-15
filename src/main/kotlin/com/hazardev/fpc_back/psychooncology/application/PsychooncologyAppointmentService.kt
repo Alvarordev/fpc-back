@@ -269,7 +269,7 @@ class PsychooncologyAppointmentService(
         request.recommendations?.let { appointment.recommendations = it }
         request.referral?.let { appointment.referral = it }
 
-        return appointmentRepository.save(appointment)
+        return appointmentRepository.saveAndFlush(appointment)
     }
 
     /**

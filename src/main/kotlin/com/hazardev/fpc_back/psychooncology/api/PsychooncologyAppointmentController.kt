@@ -46,7 +46,7 @@ class PsychooncologyAppointmentController(
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AGENT', 'VOLUNTEER')")
     fun scheduleAppointment(
         @RequestBody request: ScheduleAppointmentRequest
     ): ResponseEntity<PsychooncologyAppointmentResponse> {
@@ -55,7 +55,7 @@ class PsychooncologyAppointmentController(
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AGENT', 'VOLUNTEER')")
     fun updateAppointment(
         @PathVariable id: UUID,
         @RequestBody request: UpdateAppointmentRequest
@@ -64,7 +64,7 @@ class PsychooncologyAppointmentController(
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AGENT', 'VOLUNTEER')")
     fun deleteAppointment(@PathVariable id: UUID): ResponseEntity<Void> {
         appointmentService.deleteAppointment(id)
         return ResponseEntity.noContent().build()
@@ -86,11 +86,11 @@ class PsychooncologyAppointmentController(
 
     private fun PsychooncologyAppointment.toResponse(): PsychooncologyAppointmentResponse =
         PsychooncologyAppointmentResponse(
-            id = id!!,
-            patientId = patient.id!!,
-            volunteerId = volunteer.id!!,
-            contactId = contact.id!!,
-            availabilityId = availability.id!!,
+            id = id ?: throw IllegalStateException("Appointment ID is null"),
+            patientId = patient.id ?: throw IllegalStateException("Patient ID is null on appointment"),
+            volunteerId = volunteer.id ?: throw IllegalStateException("Volunteer ID is null on appointment"),
+            contactId = contact.id ?: throw IllegalStateException("Contact ID is null on appointment"),
+            availabilityId = availability.id ?: throw IllegalStateException("Availability ID is null on appointment"),
             patientEmail = patientEmail,
             sessionNumber = sessionNumber,
             isAdditionalSession = isAdditionalSession,
@@ -103,7 +103,7 @@ class PsychooncologyAppointmentController(
             additionalObservations = additionalObservations,
             recommendations = recommendations,
             referral = referral,
-            createdAt = createdAt!!,
-            updatedAt = updatedAt!!
+            createdAt = createdAt ?: throw IllegalStateException("createdAt is null on appointment"),
+            updatedAt = updatedAt ?: throw IllegalStateException("updatedAt is null on appointment")
         )
 }
