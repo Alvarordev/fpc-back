@@ -7,7 +7,7 @@ services:
       - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD_PROD}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: fpc_db
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -21,17 +21,17 @@ services:
       - fpc-net
 
   app:
-    image: ghcr.io/${GHCR_REPO:-hazarddev/fpc-back}:${IMAGE_TAG:-prod-latest}
+    image: ${IMAGE_NAME:-ghcr.io/alvarordev/fpc-back}:${IMAGE_TAG:-prod-latest}
     container_name: fpc-app-prod
     restart: always
     ports:
       - "127.0.0.1:8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      DB_URL: ${DB_URL_PROD:-jdbc:postgresql://postgres:5432/fpc_db}
+      DB_URL: jdbc:postgresql://postgres:5432/fpc_db
       DB_USERNAME: ${DB_USERNAME:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD_PROD}
-      JWT_SECRET: ${JWT_SECRET_PROD}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_EXPIRATION: ${JWT_ACCESS_EXPIRATION:-900000}
       JWT_REFRESH_EXPIRATION: ${JWT_REFRESH_EXPIRATION:-604800000}
     depends_on:
