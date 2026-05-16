@@ -90,6 +90,8 @@ jobs:
             set -e
             cd /opt/fpc/prod
 
+            docker compose -f docker-compose.prod.yml down
+
             echo "=== Pulling image prod-${{ env.SHORT_SHA }} ==="
 
             # Save currently running tag for potential rollback
@@ -126,6 +128,7 @@ jobs:
             echo "ERROR: Healthcheck failed after 150s — rolling back" >&2
             if [ -n "$PREV_TAG" ]; then
               echo "Rolling back to $PREV_TAG"
+              docker compose -f docker-compose.prod.yml down
               IMAGE_TAG="$PREV_TAG" \
                 docker compose -f docker-compose.prod.yml up -d --force-recreate
 
