@@ -23,7 +23,7 @@ services:
     container_name: fpc-app-dev
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8081:8080"
+      - "127.0.0.1:8082:8080"
     environment:
       SPRING_PROFILES_ACTIVE: dev
       DB_URL: jdbc:postgresql://postgres:5432/fpc_db_dev
