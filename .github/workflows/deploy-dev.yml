@@ -90,6 +90,8 @@ jobs:
             set -e
             cd /opt/fpc/dev
 
+            docker compose -f docker-compose.dev.yml down
+
             echo "=== Pulling image dev-${{ env.SHORT_SHA }} ==="
 
             IMAGE_TAG="dev-${{ env.SHORT_SHA }}" \
@@ -102,7 +104,7 @@ jobs:
 
             echo "=== Healthcheck ==="
             for i in $(seq 1 12); do
-              if wget --spider -q http://localhost:8081/actuator/health; then
+              if wget --spider -q http://localhost:8082/actuator/health; then
                 echo "Healthcheck passed after $((i * 10))s"
                 exit 0
               fi
