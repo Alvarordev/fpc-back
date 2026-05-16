@@ -1,8 +1,9 @@
-FROM gradle:8.14-jdk21 AS builder
+FROM eclipse-temurin:21-jdk-noble AS builder
 
 WORKDIR /workspace
 
 COPY gradlew .
+COPY gradlew.bat .
 COPY gradle/wrapper/ gradle/wrapper/
 COPY build.gradle.kts .
 COPY settings.gradle.kts .
