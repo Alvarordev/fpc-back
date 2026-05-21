@@ -54,8 +54,10 @@ class JwtTokenProvider(
 
     fun getAuthentication(token: String): Authentication {
         val claims = parseClaims(token)
+        requireTokenType(claims, ACCESS_TOKEN_TYPE)
         val userId = UUID.fromString(claims.subject)
-        val role = claims["role"] as? String ?: "USER"
+        val role = claims["role"] as? String
+            ?: throw IllegalArgumentException("JWT access token is missing role claim")
         val authorities = listOf(SimpleGrantedAuthority("ROLE_$role"))
         return UsernamePasswordAuthenticationToken(userId, null, authorities)
     }
@@ -64,11 +66,32 @@ class JwtTokenProvider(
         return parseClaims(token)
     }
 
+    fun isAccessToken(token: String): Boolean {
+        return try {
+            parseClaims(token)["type"] == ACCESS_TOKEN_TYPE
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     private fun parseClaims(token: String): Claims {
         return Jwts.parser()
             .verifyWith(secretKey)
             .build()
             .parseSignedClaims(token)
             .payload
+    }
+
+    private fun requireTokenType(claims: Claims, expectedType: String) {
+        val actualType = claims["type"] as? String
+            ?: throw IllegalArgumentException("JWT token is missing type claim")
+
+        if (actualType != expectedType) {
+            throw IllegalArgumentException("Expected JWT type '$expectedType' but received '$actualType'")
+        }
+    }
+
+    private companion object {
+        const val ACCESS_TOKEN_TYPE = "access"
     }
 }

@@ -18,9 +18,6 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.UUID
 
-/**
- * Manages alert entities with status lifecycle and validation rules.
- */
 @Service
 class AlertService(
     private val alertRepository: AlertRepository,
@@ -33,19 +30,6 @@ class AlertService(
         private val logger = LoggerFactory.getLogger(AlertService::class.java)
     }
 
-    /**
-     * Create a new alert with status ACTIVE.
-     *
-     * Validation rules:
-     * - Health center must exist and be active
-     * - Contact must exist
-     * - Created-by agent must exist
-     *
-     * @param request containing healthCenterId, contactId, createdByAgentId, and description
-     * @return the created alert as a response DTO
-     * @throws EntityNotFoundException if health center, contact, or agent does not exist
-     * @throws IllegalStateException if the health center is not active
-     */
     @Transactional
     fun createAlert(request: CreateAlertRequest): AlertResponse {
         val healthCenter = healthCenterRepository.findById(request.healthCenterId)
@@ -86,20 +70,6 @@ class AlertService(
         return saved.toResponse()
     }
 
-    /**
-     * Resolve an alert by setting its status to RESOLVED.
-     *
-     * Business rules:
-     * - Alert must be in ACTIVE status to be resolved
-     * - Resolved-by agent must exist
-     * - Sets resolvedAt to current timestamp
-     *
-     * @param alertId the ID of the alert to resolve
-     * @param request containing the resolvedByAgentId
-     * @return the resolved alert as a response DTO
-     * @throws EntityNotFoundException if the alert or agent does not exist
-     * @throws IllegalStateException if the alert is not in ACTIVE status
-     */
     @Transactional
     fun resolveAlert(alertId: UUID, request: ResolveAlertRequest): AlertResponse {
         val alert = alertRepository.findById(alertId)

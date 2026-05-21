@@ -13,9 +13,6 @@ import org.springframework.transaction.annotation.Transactional
 import java.text.Normalizer
 import java.util.UUID
 
-/**
- * Manages health center entities with slug generation and lifecycle operations.
- */
 @Service
 class HealthCenterService(
     private val healthCenterRepository: HealthCenterRepository
@@ -81,15 +78,6 @@ class HealthCenterService(
             .map { it.toResponse() }
     }
 
-    /**
-     * Soft-delete a health center by setting isActive = false.
-     *
-     * This keeps historical data intact while preventing new references.
-     *
-     * @param id the health center ID to deactivate
-     * @return the deactivated health center as a response DTO
-     * @throws EntityNotFoundException if no health center matches the ID
-     */
     @Transactional
     fun deactivateHealthCenter(id: UUID): HealthCenterResponse {
         val healthCenter = healthCenterRepository.findById(id)

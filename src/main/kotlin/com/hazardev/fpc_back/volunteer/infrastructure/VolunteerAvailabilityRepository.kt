@@ -34,10 +34,6 @@ interface VolunteerAvailabilityRepository : JpaRepository<VolunteerAvailability,
         startTime: java.time.LocalTime
     ): Boolean
 
-    /**
-     * Find an availability slot by ID with a pessimistic write lock to prevent race conditions
-     * when reserving a slot. This acquires a SELECT ... FOR UPDATE lock on the row.
-     */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT va FROM VolunteerAvailability va WHERE va.id = :id")
     fun findByIdWithLock(@Param("id") id: UUID): Optional<VolunteerAvailability>

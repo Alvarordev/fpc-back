@@ -76,10 +76,6 @@ data class PatientResponse(
     val symptomReports: List<SymptomReportResponse>
 )
 
-/**
- * Request to enroll a patient by creating their detailed record.
- * Triggers status change from PROSPECT to ENROLLED.
- */
 data class EnrollPatientRequest(
     val birthDepartment: String? = null,
     val currentAddress: String? = null,
@@ -96,25 +92,21 @@ data class EnrollPatientRequest(
     val requiresTranslation: Boolean = false
 )
 
-    /**
-     * Request with PatientDetails fields for full enrollment flow.
-     * Mirrors [EnrollPatientRequest] but used as a sub-object of [FullEnrollmentRequest].
-     */
-    data class EnrollPatientDetailsRequest(
-        val birthDepartment: String? = null,
-        val currentAddress: String? = null,
-        val currentDistrict: String? = null,
-        val currentDepartment: String? = null,
-        val dniMatchesAddress: Boolean? = null,
-        val travelTimeToHospital: String? = null,
-        val emergencyContactName: String? = null,
-        val emergencyContactPhone: String? = null,
-        val zoneType: String? = null,
-        val emergencyContactGender: String? = null,
-        val educationLevel: EducationLevel? = null,
-        val nativeLanguage: String? = null,
-        val requiresTranslation: Boolean = false
-    )
+data class EnrollPatientDetailsRequest(
+    val birthDepartment: String? = null,
+    val currentAddress: String? = null,
+    val currentDistrict: String? = null,
+    val currentDepartment: String? = null,
+    val dniMatchesAddress: Boolean? = null,
+    val travelTimeToHospital: String? = null,
+    val emergencyContactName: String? = null,
+    val emergencyContactPhone: String? = null,
+    val zoneType: String? = null,
+    val emergencyContactGender: String? = null,
+    val educationLevel: EducationLevel? = null,
+    val nativeLanguage: String? = null,
+    val requiresTranslation: Boolean = false
+)
 
 data class UpdatePatientDetailsRequest(
     val birthDepartment: String? = null,

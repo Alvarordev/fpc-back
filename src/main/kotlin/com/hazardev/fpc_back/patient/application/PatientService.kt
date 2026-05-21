@@ -64,21 +64,6 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.UUID
 
-/**
- * Centralized service for managing Patient entities and all their related sub-entities.
- *
- * This service is the single entry point for all patient CRUD operations,
- * including insurance history, diagnosis tracking, treatments, medical appointments,
- * SIS affiliation attempts, companion linking, and contact history.
- *
- * Business rules enforced:
- * - Never hard-delete: patients are deactivated by changing status to INACTIVE
- * - Strict status transitions: PROSPECT -> ENROLLED -> ACTIVE -> INACTIVE
- * - Current flag management: setting isCurrent=true on a new record sets all
- *   previous records for that patient to isCurrent=false
- * - DNI uniqueness validation on creation/update
- * - Referenced entity existence validation (Contact, HealthCenter, etc.)
- */
 @Service
 @Transactional
 class PatientService(
@@ -231,7 +216,7 @@ class PatientService(
             PatientStatus.ACTIVE ->
                 newStatus == PatientStatus.INACTIVE
             PatientStatus.INACTIVE ->
-                true // allow reactivation to any status
+                true
         }
 
         if (!allowed) {
@@ -919,7 +904,6 @@ class PatientService(
                 emergencyContactGender?.let { existingDetails.emergencyContactGender = it }
                 educationLevel?.let { existingDetails.educationLevel = it }
                 nativeLanguage?.let { existingDetails.nativeLanguage = it }
-                // requiresTranslation is non-nullable, always apply
                 existingDetails.requiresTranslation = requiresTranslation
             }
             patientDetailsRepository.save(existingDetails)
@@ -985,12 +969,10 @@ class PatientService(
             LocalDateTime.ofInstant(it, ZoneOffset.UTC)
         } ?: LocalDateTime.now()
 
-        // Find any SCHEDULED enrollment contact for this patient
         val scheduledContact = contactRepository.findByPatientId(patient.id!!)
             .find { it.purpose == ContactPurpose.ENROLLMENT && it.status == ContactStatus.SCHEDULED }
 
         return if (scheduledContact != null) {
-            // Transition SCHEDULED → COMPLETED
             scheduledContact.status = ContactStatus.COMPLETED
             scheduledContact.completedAt = completedAt
             if (agent != null) scheduledContact.agent = agent
@@ -998,7 +980,6 @@ class PatientService(
             scheduledAt?.let { scheduledContact.scheduledAt = it }
             contactRepository.save(scheduledContact)
         } else {
-            // Create new COMPLETED contact
             val newContact = Contact(
                 patient = patient,
                 agent = agent,

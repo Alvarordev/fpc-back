@@ -37,13 +37,6 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
-/**
- * REST controller for Patient management.
- *
- * Exposes the full [PatientService] API via REST endpoints under `/api/patients`.
- * Handles patient CRUD, enrollment, insurance, diagnoses, treatments,
- * medical appointments, SIS affiliations, companions, and contact history.
- */
 @RestController
 @RequestMapping("/api/patients")
 class PatientController(

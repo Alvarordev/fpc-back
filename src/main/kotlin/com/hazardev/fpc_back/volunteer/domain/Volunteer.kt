@@ -15,10 +15,6 @@ import org.hibernate.annotations.UpdateTimestamp
 import java.time.LocalDateTime
 import java.util.UUID
 
-/**
- * Volunteer extending a user account via 1:1 relationship (same pattern as Agent).
- * Represents a psycho-oncology volunteer who provides sessions to patients.
- */
 @Entity
 @Table(name = "volunteers")
 class Volunteer(

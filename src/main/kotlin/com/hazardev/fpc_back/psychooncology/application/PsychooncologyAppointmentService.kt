@@ -18,13 +18,6 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDateTime
 import java.util.UUID
 
-/**
- * Manages the lifecycle of psycho-oncology appointments.
- *
- * Coordinates between patients, volunteers, contacts, and availability slots.
- * Enforces business rules including the additional-session constraint and
- * atomic slot reservation via pessimistic locking.
- */
 @Service
 class PsychooncologyAppointmentService(
     private val appointmentRepository: PsychooncologyAppointmentRepository,
@@ -54,7 +47,6 @@ class PsychooncologyAppointmentService(
      */
     @Transactional
     fun scheduleAppointment(request: ScheduleAppointmentRequest): PsychooncologyAppointmentResponse {
-        // Validate business rule: additional sessions only after session 4
         if (request.isAdditionalSession && request.sessionNumber <= 4) {
             throw IllegalArgumentException(
                 "isAdditionalSession can only be true when sessionNumber > 4. " +
@@ -71,12 +63,8 @@ class PsychooncologyAppointmentService(
         val contact = contactRepository.findById(request.contactId)
             .orElseThrow { EntityNotFoundException("Contact not found with id: ${request.contactId}") }
 
-        // Atomically reserve the slot using pessimistic locking.
-        // This runs within the same transaction and holds the lock until commit.
         volunteerAvailabilityService.reserveSlot(request.availabilityId)
 
-        // Reload the availability entity now that it's locked and reserved.
-        // Since we're in the same transaction, the locked row is still held.
         val availability = volunteerAvailabilityRepository.findById(request.availabilityId)
             .orElseThrow { EntityNotFoundException("Availability slot not found with id: ${request.availabilityId}") }
 
