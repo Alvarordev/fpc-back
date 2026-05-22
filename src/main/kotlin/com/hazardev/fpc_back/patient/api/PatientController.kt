@@ -1,6 +1,7 @@
 package com.hazardev.fpc_back.patient.api
 
 import com.hazardev.fpc_back.patient.application.PatientService
+import com.hazardev.fpc_back.patient.application.PatientSummaryService
 import com.hazardev.fpc_back.patient.application.dto.AddDiagnosisRequest
 import com.hazardev.fpc_back.patient.application.dto.AddInsuranceRequest
 import com.hazardev.fpc_back.patient.application.dto.AddMedicalAppointmentRequest
@@ -40,7 +41,8 @@ import java.util.UUID
 @RestController
 @RequestMapping("/api/patients")
 class PatientController(
-    private val patientService: PatientService
+    private val patientService: PatientService,
+    private val patientSummaryService: PatientSummaryService
 ) {
 
     @GetMapping
@@ -223,5 +225,13 @@ class PatientController(
     @GetMapping("/{id}/contacts")
     fun getContactHistory(@PathVariable id: UUID): List<ContactResponse> {
         return patientService.getContactHistory(id)
+    }
+
+    @GetMapping("/dni/{dni}/summary")
+    fun getPatientSummaryByDni(@PathVariable dni: String): ResponseEntity<String> {
+        val summary = patientSummaryService.generateSummaryByDni(dni)
+        return ResponseEntity.ok()
+            .header("Content-Type", "application/json")
+            .body(summary)
     }
 }
