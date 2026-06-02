@@ -1,6 +1,6 @@
 package com.hazardev.fpc_back.shared.exception
 
-import com.fasterxml.jackson.databind.exc.InvalidFormatException
+import tools.jackson.databind.exc.InvalidFormatException
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.http.HttpStatus
@@ -79,7 +79,7 @@ class GlobalExceptionHandler {
     fun handleMessageNotReadable(ex: HttpMessageNotReadableException, request: WebRequest): ResponseEntity<ErrorResponse> {
         val cause = ex.cause
         val detail = when {
-            cause is InvalidFormatException -> "Invalid value '${cause.value}' for field '${cause.path.joinToString(".") { it.fieldName }}'"
+            cause is InvalidFormatException -> "Invalid value '${cause.value}' for field '${cause.path.joinToString(".") { it.toString() }}'"
             else -> ex.message?.substringBefore("\n") ?: "Malformed request body"
         }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)

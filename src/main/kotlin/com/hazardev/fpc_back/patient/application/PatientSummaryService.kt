@@ -1,6 +1,6 @@
 package com.hazardev.fpc_back.patient.application
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import tools.jackson.databind.ObjectMapper
 import com.hazardev.fpc_back.patient.domain.Enrollment
 import com.hazardev.fpc_back.patient.domain.Patient
 import com.hazardev.fpc_back.patient.domain.PatientDetails
