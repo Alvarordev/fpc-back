@@ -52,6 +52,9 @@ class Patient(
     @Column(nullable = false)
     var status: PatientStatus = PatientStatus.PROSPECT,
 
+    @Column(name = "summary_source_updated_at", nullable = false)
+    var summarySourceUpdatedAt: LocalDateTime? = null,
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: LocalDateTime? = null,

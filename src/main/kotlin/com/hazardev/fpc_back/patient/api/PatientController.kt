@@ -1,7 +1,7 @@
 package com.hazardev.fpc_back.patient.api
 
 import com.hazardev.fpc_back.patient.application.PatientService
-import com.hazardev.fpc_back.patient.application.PatientSummaryService
+import com.hazardev.fpc_back.patient.application.PatientSummaryQueryService
 import com.hazardev.fpc_back.patient.application.dto.AddDiagnosisRequest
 import com.hazardev.fpc_back.patient.application.dto.AddInsuranceRequest
 import com.hazardev.fpc_back.patient.application.dto.AddMedicalAppointmentRequest
@@ -42,7 +42,7 @@ import java.util.UUID
 @RequestMapping("/api/patients")
 class PatientController(
     private val patientService: PatientService,
-    private val patientSummaryService: PatientSummaryService
+    private val patientSummaryQueryService: PatientSummaryQueryService
 ) {
 
     @GetMapping
@@ -229,7 +229,10 @@ class PatientController(
 
     @GetMapping("/dni/{dni}/summary")
     fun getPatientSummaryByDni(@PathVariable dni: String): ResponseEntity<String> {
-        val summary = patientSummaryService.generateSummaryByDni(dni)
+        val summary = patientSummaryQueryService.getStoredSummaryJsonByDni(dni)
+            ?: return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .header("Content-Type", "application/json")
+                .body("{\"status\":\"PENDING\"}")
         return ResponseEntity.ok()
             .header("Content-Type", "application/json")
             .body(summary)

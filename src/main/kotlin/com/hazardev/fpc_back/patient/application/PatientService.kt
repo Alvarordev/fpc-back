@@ -24,6 +24,7 @@ import com.hazardev.fpc_back.patient.application.dto.InsuranceRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.MedicalAppointmentResponse
 import com.hazardev.fpc_back.patient.application.dto.PatientDetailsResponse
 import com.hazardev.fpc_back.patient.application.dto.PatientResponse
+import com.hazardev.fpc_back.patient.application.dto.PatientSummaryResponse
 import com.hazardev.fpc_back.patient.application.dto.SisAffiliationResponse
 import com.hazardev.fpc_back.patient.application.dto.SymptomReportRequest
 import com.hazardev.fpc_back.patient.application.dto.SymptomReportResponse
@@ -79,7 +80,9 @@ class PatientService(
     private val healthCenterRepository: HealthCenterRepository,
     private val enrollmentRepository: EnrollmentRepository,
     private val patientSymptomReportRepository: PatientSymptomReportRepository,
-    private val agentRepository: AgentRepository
+    private val agentRepository: AgentRepository,
+    private val patientSummaryDirtyMarker: PatientSummaryDirtyMarker,
+    private val patientSummaryQueryService: PatientSummaryQueryService
 ) {
 
     /**
@@ -95,6 +98,7 @@ class PatientService(
     fun createPatient(request: CreatePatientRequest): PatientResponse {
         val patient = createPatientEntity(request)
         return patientRepository.save(patient).let { saved ->
+            markSummaryDirty(saved)
             buildPatientResponse(saved)
         }
     }
@@ -113,7 +117,7 @@ class PatientService(
     @Transactional(readOnly = true)
     fun getPatient(patientId: UUID): PatientResponse {
         val patient = findPatientOrThrow(patientId)
-        return buildPatientResponse(patient)
+        return buildPatientResponse(patient, includeSummary = true)
     }
 
     /**
@@ -183,7 +187,10 @@ class PatientService(
         request.gender?.let { patient.gender = it }
         request.role?.let { patient.role = it }
 
-        return patientRepository.save(patient).let { buildPatientResponse(it) }
+        return patientRepository.save(patient).let {
+            markSummaryDirty(it)
+            buildPatientResponse(it)
+        }
     }
 
     /**
@@ -228,7 +235,10 @@ class PatientService(
         }
 
         patient.status = newStatus
-        return patientRepository.save(patient).let { buildPatientResponse(it) }
+        return patientRepository.save(patient).let {
+            markSummaryDirty(it)
+            buildPatientResponse(it)
+        }
     }
 
     /**
@@ -243,6 +253,7 @@ class PatientService(
         val patient = findPatientOrThrow(patientId)
         patient.status = PatientStatus.INACTIVE
         patientRepository.save(patient)
+        markSummaryDirty(patient)
     }
 
     /**
@@ -289,6 +300,7 @@ class PatientService(
         patient.status = PatientStatus.ENROLLED
         patientRepository.save(patient)
 
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -330,6 +342,7 @@ class PatientService(
         }
 
         patientDetailsRepository.save(details)
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -366,6 +379,7 @@ class PatientService(
         )
 
         patientInsuranceRepository.save(insurance)
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -423,6 +437,7 @@ class PatientService(
         )
 
         patientDiagnosisRepository.save(diagnosis)
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -489,6 +504,7 @@ class PatientService(
         )
 
         patientTreatmentRepository.save(treatment)
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -539,6 +555,7 @@ class PatientService(
         )
 
         patientMedicalAppointmentRepository.save(appointment)
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -577,6 +594,7 @@ class PatientService(
         )
 
         patientSisAffiliationRepository.save(affiliation)
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -605,6 +623,7 @@ class PatientService(
         sisRecord.affiliatedAt = LocalDateTime.now()
         patientSisAffiliationRepository.save(sisRecord)
 
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -672,6 +691,7 @@ class PatientService(
         )
 
         companionPatientRepository.save(link)
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -691,6 +711,7 @@ class PatientService(
         )
 
         companionPatientRepository.delete(link)
+        markSummaryDirty(link.patient)
     }
 
     /**
@@ -850,6 +871,7 @@ class PatientService(
         patient.status = PatientStatus.ENROLLED
         patientRepository.save(patient)
 
+        markSummaryDirty(patient)
         return getPatient(patientId)
     }
 
@@ -883,7 +905,8 @@ class PatientService(
             hasWhatsapp = request.hasWhatsapp,
             gender = request.gender,
             role = request.role,
-            status = request.status ?: PatientStatus.PROSPECT
+            status = request.status ?: PatientStatus.PROSPECT,
+            summarySourceUpdatedAt = LocalDateTime.now()
         )
     }
 
@@ -1042,7 +1065,7 @@ class PatientService(
         return patientSymptomReportRepository.save(report)
     }
 
-    private fun buildPatientResponse(patient: Patient): PatientResponse {
+    private fun buildPatientResponse(patient: Patient, includeSummary: Boolean = false): PatientResponse {
         val patientId = patient.id!!
 
         val details = patientDetailsRepository.findByPatientId(patientId)
@@ -1055,6 +1078,7 @@ class PatientService(
         val contacts = contactRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
         val enrollments = enrollmentRepository.findByPatientId(patientId)
         val symptomReports = patientSymptomReportRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
+        val summary = if (includeSummary) patientSummaryQueryService.getSummaryResponse(patient) else null
 
         return PatientResponse(
             id = patientId,
@@ -1078,8 +1102,13 @@ class PatientService(
             companions = companions.map { it.toCompanionResponse() },
             contacts = contacts.map { it.toResponse() },
             enrollments = enrollments.map { it.toResponse() },
-            symptomReports = symptomReports.map { it.toResponse() }
+            symptomReports = symptomReports.map { it.toResponse() },
+            summary = summary
         )
+    }
+
+    private fun markSummaryDirty(patient: Patient) {
+        patientSummaryDirtyMarker.markDirty(patient)
     }
 
 

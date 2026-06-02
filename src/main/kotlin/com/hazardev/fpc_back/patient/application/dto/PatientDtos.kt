@@ -1,5 +1,7 @@
 package com.hazardev.fpc_back.patient.application.dto
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import tools.jackson.databind.JsonNode
 import com.hazardev.fpc_back.shared.domain.AffiliationType
 import com.hazardev.fpc_back.shared.domain.CancerStage
 import com.hazardev.fpc_back.shared.domain.ContactPurpose
@@ -73,7 +75,17 @@ data class PatientResponse(
     val companions: List<CompanionResponse>,
     val contacts: List<ContactResponse>,
     val enrollments: List<EnrollmentMetadataResponse>,
-    val symptomReports: List<SymptomReportResponse>
+    val symptomReports: List<SymptomReportResponse>,
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    val summary: PatientSummaryResponse? = null
+)
+
+data class PatientSummaryResponse(
+    val status: String,
+    val stale: Boolean,
+    val updatedAt: LocalDateTime?,
+    val content: JsonNode?,
+    val lastErrorCode: String? = null
 )
 
 data class EnrollPatientRequest(

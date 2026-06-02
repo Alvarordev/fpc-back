@@ -19,15 +19,14 @@ import com.hazardev.fpc_back.patient.infrastructure.PatientRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientSisAffiliationRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientSymptomReportRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientTreatmentRepository
-import com.hazardev.fpc_back.patient.infrastructure.gemini.GeminiClient
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 @Service
 @Transactional(readOnly = true)
-class PatientSummaryService(
-    private val geminiClient: GeminiClient,
+class PatientSummaryPayloadService(
     private val patientRepository: PatientRepository,
     private val patientDetailsRepository: PatientDetailsRepository,
     private val patientInsuranceRepository: PatientInsuranceRepository,
@@ -39,10 +38,10 @@ class PatientSummaryService(
     private val patientSymptomReportRepository: PatientSymptomReportRepository,
     private val objectMapper: ObjectMapper
 ) {
-    fun generateSummaryByDni(dni: String): String {
-        val patient = patientRepository.findByDni(dni)
-            ?: throw EntityNotFoundException("No se encontró un paciente con DNI: $dni")
-        val patientId = patient.id!!
+
+    fun buildSummaryPayload(patientId: UUID): PatientSummaryPayload {
+        val patient = patientRepository.findById(patientId)
+            .orElseThrow { EntityNotFoundException("Patient not found with id: $patientId") }
 
         val details = patientDetailsRepository.findByPatientId(patientId)
         val insuranceRecords = patientInsuranceRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
@@ -53,13 +52,25 @@ class PatientSummaryService(
         val enrollments = enrollmentRepository.findByPatientId(patientId)
         val symptomReports = patientSymptomReportRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
 
-        val data = buildPatientData(
-            patient, details, insuranceRecords, diagnoses,
-            treatments, appointments, sisAffiliations, enrollments, symptomReports
+        val json = objectMapper.writeValueAsString(
+            buildPatientData(
+                patient = patient,
+                details = details,
+                insuranceRecords = insuranceRecords,
+                diagnoses = diagnoses,
+                treatments = treatments,
+                appointments = appointments,
+                sisAffiliations = sisAffiliations,
+                enrollments = enrollments,
+                symptomReports = symptomReports
+            )
         )
-        val json = objectMapper.writeValueAsString(data)
 
-        return geminiClient.generatePatientSummary(json)
+        return PatientSummaryPayload(
+            patientId = patientId,
+            sourceUpdatedAt = patient.summarySourceUpdatedAt,
+            patientDataJson = json
+        )
     }
 
     private fun buildPatientData(
@@ -177,3 +188,9 @@ class PatientSummaryService(
         )
     }
 }
+
+data class PatientSummaryPayload(
+    val patientId: UUID,
+    val sourceUpdatedAt: java.time.LocalDateTime?,
+    val patientDataJson: String
+)
