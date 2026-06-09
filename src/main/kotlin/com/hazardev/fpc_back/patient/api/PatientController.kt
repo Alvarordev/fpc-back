@@ -13,7 +13,6 @@ import com.hazardev.fpc_back.patient.application.dto.CompanionResponse
 import com.hazardev.fpc_back.patient.application.dto.ContactResponse
 import com.hazardev.fpc_back.patient.application.dto.CreatePatientRequest
 import com.hazardev.fpc_back.patient.application.dto.DiagnosisRecordResponse
-import com.hazardev.fpc_back.patient.application.dto.EnrollPatientRequest
 import com.hazardev.fpc_back.patient.application.dto.FullEnrollmentRequest
 import com.hazardev.fpc_back.patient.application.dto.InsuranceRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.LinkCompanionRequest
@@ -93,15 +92,6 @@ class PatientController(
         @Valid @RequestBody request: FullEnrollmentRequest
     ): ResponseEntity<PatientResponse> {
         val response = patientService.fullEnrollment(request)
-        return ResponseEntity.status(HttpStatus.CREATED).body(response)
-    }
-
-    @PostMapping("/{id}/enroll")
-    fun enrollPatient(
-        @PathVariable id: UUID,
-        @RequestBody request: EnrollPatientRequest
-    ): ResponseEntity<PatientResponse> {
-        val response = patientService.enrollPatient(id, request)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 

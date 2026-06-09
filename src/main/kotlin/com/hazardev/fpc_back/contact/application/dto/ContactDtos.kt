@@ -15,7 +15,8 @@ data class CreateContactRequest(
     val scheduledAt: LocalDateTime? = null,
     val completedAt: LocalDateTime? = null,
     val notes: String? = null,
-    val scheduledNextContactId: UUID? = null
+    val scheduledNextContactId: UUID? = null,
+    val serviceReferral: ContactServiceReferralRequest? = null
 )
 
 data class UpdateContactRequest(
@@ -27,7 +28,40 @@ data class UpdateContactRequest(
     val scheduledAt: LocalDateTime? = null,
     val completedAt: LocalDateTime? = null,
     val notes: String? = null,
-    val scheduledNextContactId: UUID? = null
+    val scheduledNextContactId: UUID? = null,
+    val serviceReferral: ContactServiceReferralRequest? = null
+)
+
+data class ContactServiceReferralRequest(
+    val referredToSocialWorker: Boolean? = null,
+    val referredToSusalud: Boolean? = null,
+    val susaludRegistrationNumber: String? = null,
+    val receivedFoodGuide: Boolean? = null,
+    val participatesInGam: Boolean? = null,
+    val programSatisfaction: String? = null,
+    val wellbeingChanges: String? = null,
+    val knowsAboutFissal: Boolean? = null,
+    val referredToPaus: Boolean? = null,
+    val referredToDae: Boolean? = null,
+    val referredToFissal: Boolean? = null
+)
+
+data class ContactServiceReferralResponse(
+    val id: UUID,
+    val contactId: UUID,
+    val referredToSocialWorker: Boolean?,
+    val referredToSusalud: Boolean?,
+    val susaludRegistrationNumber: String?,
+    val receivedFoodGuide: Boolean?,
+    val participatesInGam: Boolean?,
+    val programSatisfaction: String?,
+    val wellbeingChanges: String?,
+    val knowsAboutFissal: Boolean?,
+    val referredToPaus: Boolean?,
+    val referredToDae: Boolean?,
+    val referredToFissal: Boolean?,
+    val createdAt: LocalDateTime,
+    val updatedAt: LocalDateTime
 )
 
 data class ContactResponse(
@@ -41,6 +75,7 @@ data class ContactResponse(
     val completedAt: LocalDateTime?,
     val notes: String?,
     val scheduledNextContactId: UUID?,
+    val serviceReferral: ContactServiceReferralResponse?,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime
 )

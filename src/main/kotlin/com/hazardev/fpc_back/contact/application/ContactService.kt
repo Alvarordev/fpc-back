@@ -1,11 +1,15 @@
 package com.hazardev.fpc_back.contact.application
 
 import com.hazardev.fpc_back.agent.infrastructure.AgentRepository
+import com.hazardev.fpc_back.contact.application.dto.ContactServiceReferralRequest
+import com.hazardev.fpc_back.contact.application.dto.ContactServiceReferralResponse
 import com.hazardev.fpc_back.contact.application.dto.ContactResponse
 import com.hazardev.fpc_back.contact.application.dto.CreateContactRequest
 import com.hazardev.fpc_back.contact.application.dto.UpdateContactRequest
 import com.hazardev.fpc_back.contact.domain.Contact
+import com.hazardev.fpc_back.contact.domain.ContactServiceReferral
 import com.hazardev.fpc_back.contact.infrastructure.ContactRepository
+import com.hazardev.fpc_back.contact.infrastructure.ContactServiceReferralRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientRepository
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
@@ -15,6 +19,7 @@ import java.util.UUID
 @Service
 class ContactService(
     private val contactRepository: ContactRepository,
+    private val contactServiceReferralRepository: ContactServiceReferralRepository,
     private val patientRepository: PatientRepository,
     private val agentRepository: AgentRepository
 ) {
@@ -46,17 +51,24 @@ class ContactService(
             scheduledNextContact = scheduledNextContact
         )
 
-        return contactRepository.saveAndFlush(contact).toResponse()
+        val savedContact = contactRepository.saveAndFlush(contact)
+        val serviceReferral = upsertServiceReferral(savedContact, request.serviceReferral)
+        return savedContact.toResponse(serviceReferral)
     }
 
     fun getContactById(id: UUID): ContactResponse {
         val contact = contactRepository.findById(id)
             .orElseThrow { EntityNotFoundException("Contact not found with id: $id") }
-        return contact.toResponse()
+        return contact.toResponse(contactServiceReferralRepository.findByContactId(id))
     }
 
     fun listContacts(): List<ContactResponse> {
-        return contactRepository.findAll().map { it.toResponse() }
+        val contacts = contactRepository.findAll()
+        val serviceReferrals = contactServiceReferralRepository.findByContactIdIn(contacts.mapNotNull { it.id })
+            .associateBy { it.contact.id!! }
+        return contacts.map { contact ->
+            contact.toResponse(contact.id?.let(serviceReferrals::get))
+        }
     }
 
     @Transactional
@@ -92,7 +104,14 @@ class ContactService(
             contact.scheduledNextContact = nextContact
         }
 
-        return contactRepository.saveAndFlush(contact).toResponse()
+        val savedContact = contactRepository.saveAndFlush(contact)
+        val serviceReferral = if (request.serviceReferral != null) {
+            upsertServiceReferral(savedContact, request.serviceReferral)
+        } else {
+            contactServiceReferralRepository.findByContactId(savedContact.id!!)
+        }
+
+        return savedContact.toResponse(serviceReferral)
     }
 
     @Transactional
@@ -103,7 +122,46 @@ class ContactService(
         contactRepository.deleteById(id)
     }
 
-    private fun Contact.toResponse(): ContactResponse = ContactResponse(
+    private fun upsertServiceReferral(
+        contact: Contact,
+        request: ContactServiceReferralRequest?
+    ): ContactServiceReferral? {
+        if (request == null || !request.hasAnyValue()) {
+            return contact.id?.let { contactServiceReferralRepository.findByContactId(it) }
+        }
+
+        val existing = contact.id?.let { contactServiceReferralRepository.findByContactId(it) }
+        val serviceReferral = existing ?: ContactServiceReferral(contact = contact)
+
+        request.referredToSocialWorker?.let { serviceReferral.referredToSocialWorker = it }
+        request.referredToSusalud?.let { serviceReferral.referredToSusalud = it }
+        request.susaludRegistrationNumber?.let { serviceReferral.susaludRegistrationNumber = it }
+        request.receivedFoodGuide?.let { serviceReferral.receivedFoodGuide = it }
+        request.participatesInGam?.let { serviceReferral.participatesInGam = it }
+        request.programSatisfaction?.let { serviceReferral.programSatisfaction = it }
+        request.wellbeingChanges?.let { serviceReferral.wellbeingChanges = it }
+        request.knowsAboutFissal?.let { serviceReferral.knowsAboutFissal = it }
+        request.referredToPaus?.let { serviceReferral.referredToPaus = it }
+        request.referredToDae?.let { serviceReferral.referredToDae = it }
+        request.referredToFissal?.let { serviceReferral.referredToFissal = it }
+
+        return contactServiceReferralRepository.saveAndFlush(serviceReferral)
+    }
+
+    private fun ContactServiceReferralRequest.hasAnyValue(): Boolean =
+        referredToSocialWorker != null ||
+            referredToSusalud != null ||
+            susaludRegistrationNumber != null ||
+            receivedFoodGuide != null ||
+            participatesInGam != null ||
+            programSatisfaction != null ||
+            wellbeingChanges != null ||
+            knowsAboutFissal != null ||
+            referredToPaus != null ||
+            referredToDae != null ||
+            referredToFissal != null
+
+    private fun Contact.toResponse(serviceReferral: ContactServiceReferral?): ContactResponse = ContactResponse(
         id = id ?: throw IllegalStateException("Contact ID is null after save"),
         patientId = patient.id ?: throw IllegalStateException("Patient ID is null on contact"),
         agentId = agent?.id,
@@ -114,7 +172,26 @@ class ContactService(
         completedAt = completedAt,
         notes = notes,
         scheduledNextContactId = scheduledNextContact?.id,
+        serviceReferral = serviceReferral?.toResponse(),
         createdAt = createdAt ?: throw IllegalStateException("createdAt is null on contact"),
         updatedAt = updatedAt ?: throw IllegalStateException("updatedAt is null on contact")
+    )
+
+    private fun ContactServiceReferral.toResponse(): ContactServiceReferralResponse = ContactServiceReferralResponse(
+        id = id ?: throw IllegalStateException("Service referral ID is null after save"),
+        contactId = contact.id ?: throw IllegalStateException("Contact ID is null on service referral"),
+        referredToSocialWorker = referredToSocialWorker,
+        referredToSusalud = referredToSusalud,
+        susaludRegistrationNumber = susaludRegistrationNumber,
+        receivedFoodGuide = receivedFoodGuide,
+        participatesInGam = participatesInGam,
+        programSatisfaction = programSatisfaction,
+        wellbeingChanges = wellbeingChanges,
+        knowsAboutFissal = knowsAboutFissal,
+        referredToPaus = referredToPaus,
+        referredToDae = referredToDae,
+        referredToFissal = referredToFissal,
+        createdAt = createdAt ?: throw IllegalStateException("createdAt is null on service referral"),
+        updatedAt = updatedAt ?: throw IllegalStateException("updatedAt is null on service referral")
     )
 }

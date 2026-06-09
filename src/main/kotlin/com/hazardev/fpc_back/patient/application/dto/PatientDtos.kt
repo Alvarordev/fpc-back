@@ -1,6 +1,7 @@
 package com.hazardev.fpc_back.patient.application.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.hazardev.fpc_back.contact.application.dto.ContactServiceReferralResponse
 import tools.jackson.databind.JsonNode
 import com.hazardev.fpc_back.shared.domain.AffiliationType
 import com.hazardev.fpc_back.shared.domain.CancerStage
@@ -73,6 +74,7 @@ data class PatientResponse(
     val medicalAppointments: List<MedicalAppointmentResponse>,
     val sisAffiliations: List<SisAffiliationResponse>,
     val companions: List<CompanionResponse>,
+    val familyPreventionTalkInterests: List<FamilyPreventionTalkInterestResponse>,
     val contacts: List<ContactResponse>,
     val enrollments: List<EnrollmentMetadataResponse>,
     val symptomReports: List<SymptomReportResponse>,
@@ -86,22 +88,6 @@ data class PatientSummaryResponse(
     val updatedAt: LocalDateTime?,
     val content: JsonNode?,
     val lastErrorCode: String? = null
-)
-
-data class EnrollPatientRequest(
-    val birthDepartment: String? = null,
-    val currentAddress: String? = null,
-    val currentDistrict: String? = null,
-    val currentDepartment: String? = null,
-    val dniMatchesAddress: Boolean? = null,
-    val travelTimeToHospital: String? = null,
-    val emergencyContactName: String? = null,
-    val emergencyContactPhone: String? = null,
-    val zoneType: String? = null,
-    val emergencyContactGender: String? = null,
-    val educationLevel: EducationLevel? = null,
-    val nativeLanguage: String? = null,
-    val requiresTranslation: Boolean = false
 )
 
 data class EnrollPatientDetailsRequest(
@@ -306,6 +292,7 @@ data class ContactResponse(
     val scheduledAt: LocalDateTime?,
     val completedAt: LocalDateTime?,
     val notes: String?,
+    val serviceReferral: ContactServiceReferralResponse?,
     val createdAt: LocalDateTime
 )
 
@@ -338,8 +325,26 @@ data class FullEnrollmentRequest(
     val medicalAppointments: List<AddMedicalAppointmentRequest>?,
     val sisAffiliation: AddSisAffiliationRequest?,
     val companions: List<LinkCompanionRequest>?,
+    val familyPreventionTalkInterests: List<FamilyPreventionTalkInterestRequest>? = null,
     val enrollmentMetadata: EnrollmentMetadataRequest? = null,
     val symptomReport: SymptomReportRequest? = null
+)
+
+data class FamilyPreventionTalkInterestRequest(
+    val talkName: String,
+    val familyMemberName: String,
+    val familyMemberPhone: String,
+    val familyMemberEmail: String
+)
+
+data class FamilyPreventionTalkInterestResponse(
+    val id: UUID,
+    val patientId: UUID,
+    val talkName: String,
+    val familyMemberName: String,
+    val familyMemberPhone: String,
+    val familyMemberEmail: String,
+    val createdAt: LocalDateTime
 )
 
 /**

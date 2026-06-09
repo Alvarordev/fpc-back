@@ -1,8 +1,11 @@
 package com.hazardev.fpc_back.patient.application
 
 import com.hazardev.fpc_back.agent.infrastructure.AgentRepository
+import com.hazardev.fpc_back.contact.application.dto.ContactServiceReferralResponse
 import com.hazardev.fpc_back.contact.domain.Contact
+import com.hazardev.fpc_back.contact.domain.ContactServiceReferral
 import com.hazardev.fpc_back.contact.infrastructure.ContactRepository
+import com.hazardev.fpc_back.contact.infrastructure.ContactServiceReferralRepository
 import com.hazardev.fpc_back.healthcenter.infrastructure.HealthCenterRepository
 import com.hazardev.fpc_back.patient.application.dto.AddDiagnosisRequest
 import com.hazardev.fpc_back.patient.application.dto.AddInsuranceRequest
@@ -16,9 +19,10 @@ import com.hazardev.fpc_back.patient.application.dto.CreatePatientRequest
 import com.hazardev.fpc_back.patient.application.dto.DiagnosisRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.DiagnosisSummary
 import com.hazardev.fpc_back.patient.application.dto.EnrollPatientDetailsRequest
-import com.hazardev.fpc_back.patient.application.dto.EnrollPatientRequest
 import com.hazardev.fpc_back.patient.application.dto.EnrollmentMetadataRequest
 import com.hazardev.fpc_back.patient.application.dto.EnrollmentMetadataResponse
+import com.hazardev.fpc_back.patient.application.dto.FamilyPreventionTalkInterestRequest
+import com.hazardev.fpc_back.patient.application.dto.FamilyPreventionTalkInterestResponse
 import com.hazardev.fpc_back.patient.application.dto.FullEnrollmentRequest
 import com.hazardev.fpc_back.patient.application.dto.InsuranceRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.MedicalAppointmentResponse
@@ -36,6 +40,7 @@ import com.hazardev.fpc_back.patient.domain.Enrollment
 import com.hazardev.fpc_back.patient.domain.Patient
 import com.hazardev.fpc_back.patient.domain.PatientDetails
 import com.hazardev.fpc_back.patient.domain.PatientDiagnosis
+import com.hazardev.fpc_back.patient.domain.PatientFamilyPreventionTalkInterest
 import com.hazardev.fpc_back.patient.domain.PatientInsurance
 import com.hazardev.fpc_back.patient.domain.PatientMedicalAppointment
 import com.hazardev.fpc_back.patient.domain.PatientSisAffiliation
@@ -45,6 +50,7 @@ import com.hazardev.fpc_back.patient.infrastructure.CompanionPatientRepository
 import com.hazardev.fpc_back.patient.infrastructure.EnrollmentRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientDetailsRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientDiagnosisRepository
+import com.hazardev.fpc_back.patient.infrastructure.PatientFamilyPreventionTalkInterestRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientInsuranceRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientMedicalAppointmentRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientRepository
@@ -72,11 +78,13 @@ class PatientService(
     private val patientDetailsRepository: PatientDetailsRepository,
     private val patientInsuranceRepository: PatientInsuranceRepository,
     private val patientDiagnosisRepository: PatientDiagnosisRepository,
+    private val patientFamilyPreventionTalkInterestRepository: PatientFamilyPreventionTalkInterestRepository,
     private val patientTreatmentRepository: PatientTreatmentRepository,
     private val patientMedicalAppointmentRepository: PatientMedicalAppointmentRepository,
     private val patientSisAffiliationRepository: PatientSisAffiliationRepository,
     private val companionPatientRepository: CompanionPatientRepository,
     private val contactRepository: ContactRepository,
+    private val contactServiceReferralRepository: ContactServiceReferralRepository,
     private val healthCenterRepository: HealthCenterRepository,
     private val enrollmentRepository: EnrollmentRepository,
     private val patientSymptomReportRepository: PatientSymptomReportRepository,
@@ -254,54 +262,6 @@ class PatientService(
         patient.status = PatientStatus.INACTIVE
         patientRepository.save(patient)
         markSummaryDirty(patient)
-    }
-
-    /**
-     * Enroll a patient by creating their detailed record.
-     *
-     * Automatically changes the patient status from PROSPECT to ENROLLED.
-     * A patient can only have one details record (enforced by unique constraint).
-     *
-     * @param patientId the patient ID
-     * @param request the enrollment data
-     * @return the complete patient response including the new details
-     * @throws EntityNotFoundException if the patient does not exist
-     * @throws IllegalStateException if the patient is not in PROSPECT status
-     */
-    fun enrollPatient(patientId: UUID, request: EnrollPatientRequest): PatientResponse {
-        val patient = findPatientOrThrow(patientId)
-
-        if (patient.status != PatientStatus.PROSPECT) {
-            throw IllegalStateException(
-                "Cannot enroll patient $patientId: current status is ${patient.status}, " +
-                    "expected PROSPECT"
-            )
-        }
-
-        val details = PatientDetails(
-            patient = patient,
-            birthDepartment = request.birthDepartment,
-            currentAddress = request.currentAddress,
-            currentDistrict = request.currentDistrict,
-            currentDepartment = request.currentDepartment,
-            dniMatchesAddress = request.dniMatchesAddress,
-            travelTimeToHospital = request.travelTimeToHospital,
-            emergencyContactName = request.emergencyContactName,
-            emergencyContactPhone = request.emergencyContactPhone,
-            zoneType = request.zoneType,
-            emergencyContactGender = request.emergencyContactGender,
-            educationLevel = request.educationLevel,
-            nativeLanguage = request.nativeLanguage,
-            requiresTranslation = request.requiresTranslation
-        )
-
-        patientDetailsRepository.save(details)
-
-        patient.status = PatientStatus.ENROLLED
-        patientRepository.save(patient)
-
-        markSummaryDirty(patient)
-        return buildPatientResponse(patient)
     }
 
     /**
@@ -868,6 +828,8 @@ class PatientService(
             )
         }
 
+        saveFamilyPreventionTalkInterests(patient, request.familyPreventionTalkInterests)
+
         patient.status = PatientStatus.ENROLLED
         patientRepository.save(patient)
 
@@ -883,8 +845,13 @@ class PatientService(
      */
     @Transactional(readOnly = true)
     fun getContactHistory(patientId: UUID): List<ContactResponse> {
-        return contactRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
-            .map { it.toResponse() }
+        val contacts = contactRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
+        val serviceReferrals = contactServiceReferralRepository.findByContactIdIn(contacts.mapNotNull { it.id })
+            .associateBy { it.contact.id!! }
+
+        return contacts.map { contact ->
+            contact.toResponse(contact.id?.let(serviceReferrals::get))
+        }
     }
 
     private fun createPatientEntity(request: CreatePatientRequest): Patient {
@@ -954,6 +921,23 @@ class PatientService(
     private fun findPatientOrThrow(patientId: UUID): Patient {
         return patientRepository.findById(patientId)
             .orElseThrow { EntityNotFoundException("Patient not found with id: $patientId") }
+    }
+
+    private fun saveFamilyPreventionTalkInterests(
+        patient: Patient,
+        interests: List<FamilyPreventionTalkInterestRequest>?
+    ) {
+        interests?.forEach { interest ->
+            patientFamilyPreventionTalkInterestRepository.save(
+                PatientFamilyPreventionTalkInterest(
+                    patient = patient,
+                    talkName = interest.talkName,
+                    familyMemberName = interest.familyMemberName,
+                    familyMemberPhone = interest.familyMemberPhone,
+                    familyMemberEmail = interest.familyMemberEmail
+                )
+            )
+        }
     }
 
     private fun findContactOrThrow(contactId: UUID): Contact {
@@ -1075,7 +1059,11 @@ class PatientService(
         val medicalAppointments = patientMedicalAppointmentRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
         val sisAffiliations = patientSisAffiliationRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
         val companions = companionPatientRepository.findByPatientId(patientId)
+        val familyPreventionTalkInterests =
+            patientFamilyPreventionTalkInterestRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
         val contacts = contactRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
+        val contactServiceReferrals = contactServiceReferralRepository.findByContactIdIn(contacts.mapNotNull { it.id })
+            .associateBy { it.contact.id!! }
         val enrollments = enrollmentRepository.findByPatientId(patientId)
         val symptomReports = patientSymptomReportRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
         val summary = if (includeSummary) patientSummaryQueryService.getSummaryResponse(patient) else null
@@ -1100,7 +1088,10 @@ class PatientService(
             medicalAppointments = medicalAppointments.map { it.toResponse() },
             sisAffiliations = sisAffiliations.map { it.toResponse() },
             companions = companions.map { it.toCompanionResponse() },
-            contacts = contacts.map { it.toResponse() },
+            familyPreventionTalkInterests = familyPreventionTalkInterests.map { it.toResponse() },
+            contacts = contacts.map { contact ->
+                contact.toResponse(contact.id?.let(contactServiceReferrals::get))
+            },
             enrollments = enrollments.map { it.toResponse() },
             symptomReports = symptomReports.map { it.toResponse() },
             summary = summary
@@ -1258,7 +1249,7 @@ class PatientService(
         isPrimaryInformant = isPrimaryInformant
     )
 
-    private fun Contact.toResponse(): ContactResponse = ContactResponse(
+    private fun Contact.toResponse(serviceReferral: ContactServiceReferral?): ContactResponse = ContactResponse(
         id = id!!,
         agentName = agent?.fullName,
         type = type,
@@ -1267,8 +1258,38 @@ class PatientService(
         scheduledAt = scheduledAt,
         completedAt = completedAt,
         notes = notes,
+        serviceReferral = serviceReferral?.toResponse(),
         createdAt = createdAt!!
     )
+
+    private fun ContactServiceReferral.toResponse(): ContactServiceReferralResponse = ContactServiceReferralResponse(
+        id = id!!,
+        contactId = contact.id!!,
+        referredToSocialWorker = referredToSocialWorker,
+        referredToSusalud = referredToSusalud,
+        susaludRegistrationNumber = susaludRegistrationNumber,
+        receivedFoodGuide = receivedFoodGuide,
+        participatesInGam = participatesInGam,
+        programSatisfaction = programSatisfaction,
+        wellbeingChanges = wellbeingChanges,
+        knowsAboutFissal = knowsAboutFissal,
+        referredToPaus = referredToPaus,
+        referredToDae = referredToDae,
+        referredToFissal = referredToFissal,
+        createdAt = createdAt!!,
+        updatedAt = updatedAt!!
+    )
+
+    private fun PatientFamilyPreventionTalkInterest.toResponse(): FamilyPreventionTalkInterestResponse =
+        FamilyPreventionTalkInterestResponse(
+            id = id!!,
+            patientId = patient.id!!,
+            talkName = talkName,
+            familyMemberName = familyMemberName,
+            familyMemberPhone = familyMemberPhone,
+            familyMemberEmail = familyMemberEmail,
+            createdAt = createdAt!!
+        )
 
     private fun Contact.toSummary(): ContactSummary = ContactSummary(
         id = id!!,
