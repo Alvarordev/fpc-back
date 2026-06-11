@@ -14,6 +14,7 @@ import jakarta.persistence.OneToOne
 import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
 import org.hibernate.annotations.UpdateTimestamp
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -67,6 +68,36 @@ class PatientDetails(
 
     @Column(name = "requires_translation", nullable = false)
     var requiresTranslation: Boolean = false,
+
+    @Column(name = "referred_to_social_worker", nullable = true)
+    var referredToSocialWorker: Boolean? = null,
+
+    @Column(name = "evidence_of_domestic_violence", nullable = true)
+    var evidenceOfDomesticViolence: Boolean? = null,
+
+    @Column(name = "uses_wood_stove", nullable = true)
+    var usesWoodStove: Boolean? = null,
+
+    @Column(name = "is_working", nullable = true)
+    var isWorking: Boolean? = null,
+
+    @Column(name = "receives_financial_support", nullable = true)
+    var receivesFinancialSupport: Boolean? = null,
+
+    @Column(name = "program_dropout_reason", nullable = true)
+    var programDropoutReason: String? = null,
+
+    @Column(name = "program_dropout_date", nullable = true)
+    var programDropoutDate: LocalDate? = null,
+
+    @Column(name = "has_conadis_card", nullable = true)
+    var hasConadisCard: Boolean? = null,
+
+    @Column(name = "knows_about_fissal", nullable = true)
+    var knowsAboutFissal: Boolean? = null,
+
+    @Column(name = "is_deceased", nullable = true)
+    var isDeceased: Boolean? = null,
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

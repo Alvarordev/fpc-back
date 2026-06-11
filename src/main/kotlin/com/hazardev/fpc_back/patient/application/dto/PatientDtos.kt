@@ -103,7 +103,17 @@ data class EnrollPatientDetailsRequest(
     val emergencyContactGender: String? = null,
     val educationLevel: EducationLevel? = null,
     val nativeLanguage: String? = null,
-    val requiresTranslation: Boolean = false
+    val requiresTranslation: Boolean = false,
+    val referredToSocialWorker: Boolean? = null,
+    val evidenceOfDomesticViolence: Boolean? = null,
+    val usesWoodStove: Boolean? = null,
+    val isWorking: Boolean? = null,
+    val receivesFinancialSupport: Boolean? = null,
+    val programDropoutReason: String? = null,
+    val programDropoutDate: LocalDate? = null,
+    val hasConadisCard: Boolean? = null,
+    val knowsAboutFissal: Boolean? = null,
+    val isDeceased: Boolean? = null
 )
 
 data class UpdatePatientDetailsRequest(
@@ -119,7 +129,17 @@ data class UpdatePatientDetailsRequest(
     val emergencyContactGender: String? = null,
     val educationLevel: EducationLevel? = null,
     val nativeLanguage: String? = null,
-    val requiresTranslation: Boolean? = null
+    val requiresTranslation: Boolean? = null,
+    val referredToSocialWorker: Boolean? = null,
+    val evidenceOfDomesticViolence: Boolean? = null,
+    val usesWoodStove: Boolean? = null,
+    val isWorking: Boolean? = null,
+    val receivesFinancialSupport: Boolean? = null,
+    val programDropoutReason: String? = null,
+    val programDropoutDate: LocalDate? = null,
+    val hasConadisCard: Boolean? = null,
+    val knowsAboutFissal: Boolean? = null,
+    val isDeceased: Boolean? = null
 )
 
 data class PatientDetailsResponse(
@@ -138,6 +158,16 @@ data class PatientDetailsResponse(
     val educationLevel: EducationLevel?,
     val nativeLanguage: String?,
     val requiresTranslation: Boolean,
+    val referredToSocialWorker: Boolean?,
+    val evidenceOfDomesticViolence: Boolean?,
+    val usesWoodStove: Boolean?,
+    val isWorking: Boolean?,
+    val receivesFinancialSupport: Boolean?,
+    val programDropoutReason: String?,
+    val programDropoutDate: LocalDate?,
+    val hasConadisCard: Boolean?,
+    val knowsAboutFissal: Boolean?,
+    val isDeceased: Boolean?,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime
 )
@@ -366,6 +396,7 @@ data class EnrollmentMetadataRequest(
     val currentlyAttendingConsultations: Boolean? = null,
     val currentlyReceivingTreatment: Boolean? = null,
     val surveyAccepted: Boolean = false,
+    val wantsPsychooncologySupport: Boolean? = null,
     val agentId: UUID? = null
 )
 
@@ -391,6 +422,7 @@ data class EnrollmentMetadataResponse(
     val hasMobilityIssues: Boolean?,
     val isOncologicalPatient: Boolean,
     val surveyAccepted: Boolean,
+    val wantsPsychooncologySupport: Boolean?,
     val createdAt: LocalDateTime
 )
 

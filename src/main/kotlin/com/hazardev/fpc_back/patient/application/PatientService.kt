@@ -299,6 +299,16 @@ class PatientService(
             educationLevel?.let { details.educationLevel = it }
             nativeLanguage?.let { details.nativeLanguage = it }
             requiresTranslation?.let { details.requiresTranslation = it }
+            referredToSocialWorker?.let { details.referredToSocialWorker = it }
+            evidenceOfDomesticViolence?.let { details.evidenceOfDomesticViolence = it }
+            usesWoodStove?.let { details.usesWoodStove = it }
+            isWorking?.let { details.isWorking = it }
+            receivesFinancialSupport?.let { details.receivesFinancialSupport = it }
+            programDropoutReason?.let { details.programDropoutReason = it }
+            programDropoutDate?.let { details.programDropoutDate = it }
+            hasConadisCard?.let { details.hasConadisCard = it }
+            knowsAboutFissal?.let { details.knowsAboutFissal = it }
+            isDeceased?.let { details.isDeceased = it }
         }
 
         patientDetailsRepository.save(details)
@@ -895,6 +905,16 @@ class PatientService(
                 educationLevel?.let { existingDetails.educationLevel = it }
                 nativeLanguage?.let { existingDetails.nativeLanguage = it }
                 existingDetails.requiresTranslation = requiresTranslation
+                referredToSocialWorker?.let { existingDetails.referredToSocialWorker = it }
+                evidenceOfDomesticViolence?.let { existingDetails.evidenceOfDomesticViolence = it }
+                usesWoodStove?.let { existingDetails.usesWoodStove = it }
+                isWorking?.let { existingDetails.isWorking = it }
+                receivesFinancialSupport?.let { existingDetails.receivesFinancialSupport = it }
+                programDropoutReason?.let { existingDetails.programDropoutReason = it }
+                programDropoutDate?.let { existingDetails.programDropoutDate = it }
+                hasConadisCard?.let { existingDetails.hasConadisCard = it }
+                knowsAboutFissal?.let { existingDetails.knowsAboutFissal = it }
+                isDeceased?.let { existingDetails.isDeceased = it }
             }
             patientDetailsRepository.save(existingDetails)
         } else {
@@ -912,7 +932,17 @@ class PatientService(
                 emergencyContactGender = request.emergencyContactGender,
                 educationLevel = request.educationLevel,
                 nativeLanguage = request.nativeLanguage,
-                requiresTranslation = request.requiresTranslation
+                requiresTranslation = request.requiresTranslation,
+                referredToSocialWorker = request.referredToSocialWorker,
+                evidenceOfDomesticViolence = request.evidenceOfDomesticViolence,
+                usesWoodStove = request.usesWoodStove,
+                isWorking = request.isWorking,
+                receivesFinancialSupport = request.receivesFinancialSupport,
+                programDropoutReason = request.programDropoutReason,
+                programDropoutDate = request.programDropoutDate,
+                hasConadisCard = request.hasConadisCard,
+                knowsAboutFissal = request.knowsAboutFissal,
+                isDeceased = request.isDeceased
             )
             patientDetailsRepository.save(details)
         }
@@ -1019,7 +1049,8 @@ class PatientService(
             consentToShareData = enrollmentData.informedConsentAccepted,
             affiliationType = enrollmentData.affiliationType,
             isOncologicalPatient = enrollmentData.isOncologicalPatient,
-            surveyAccepted = enrollmentData.surveyAccepted
+            surveyAccepted = enrollmentData.surveyAccepted,
+            wantsPsychooncologySupport = enrollmentData.wantsPsychooncologySupport
         )
         return enrollmentRepository.save(enrollment)
     }
@@ -1119,6 +1150,16 @@ class PatientService(
         educationLevel = educationLevel,
         nativeLanguage = nativeLanguage,
         requiresTranslation = requiresTranslation,
+        referredToSocialWorker = referredToSocialWorker,
+        evidenceOfDomesticViolence = evidenceOfDomesticViolence,
+        usesWoodStove = usesWoodStove,
+        isWorking = isWorking,
+        receivesFinancialSupport = receivesFinancialSupport,
+        programDropoutReason = programDropoutReason,
+        programDropoutDate = programDropoutDate,
+        hasConadisCard = hasConadisCard,
+        knowsAboutFissal = knowsAboutFissal,
+        isDeceased = isDeceased,
         createdAt = createdAt!!,
         updatedAt = updatedAt!!
     )
@@ -1221,6 +1262,7 @@ class PatientService(
         hasMobilityIssues = hasMobilityIssues,
         isOncologicalPatient = isOncologicalPatient,
         surveyAccepted = surveyAccepted,
+        wantsPsychooncologySupport = wantsPsychooncologySupport,
         createdAt = createdAt!!
     )
 

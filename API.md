@@ -55,6 +55,7 @@ Cross-origin requests are configurable through application properties.
 | Psychooncology Appointments | — | `GET`, `POST .../complete`, `POST .../cancel` | `POST`, `PUT`, `DELETE` appointments |
 | Health Centers | — | `GET`, `GET /slug/{slug}` | `POST`, `PUT`, `DELETE`, `PATCH .../reactivate` |
 | Alerts | — | `GET` | `POST`, `PUT`, `DELETE`, `POST .../resolve` |
+| Recordatorios | — | `GET` | `POST`, `PUT`, `DELETE`, `POST .../complete`, `POST .../cancel` |
 
 > **Note:** `GET /agents` and `GET /agents/{id}` are JWT (no ADMIN restriction). All other `GET`-only list/detail endpoints across domains are JWT only unless otherwise noted.
 
@@ -185,6 +186,25 @@ Cross-origin requests are configurable through application properties.
 | `COMPLETED` |
 | `CANCELLED` |
 | `NO_ANSWER` |
+
+### ReminderType
+
+| Value | Description |
+|-------|-------------|
+| `LABORATORIO` | Lab test reminder |
+| `IMAGEN` | Imaging study reminder |
+| `CONSULTA` | Medical consultation reminder |
+| `PROCEDIMIENTO` | Medical procedure reminder |
+| `MEDICACION` | Medication reminder |
+| `OTRO` | Other type of reminder |
+
+### ReminderStatus
+
+| Value | Description |
+|-------|-------------|
+| `PENDIENTE` | Pending (default) |
+| `COMPLETADO` | Completed |
+| `CANCELADO` | Canceled |
 
 ### ReferralType
 
@@ -2574,6 +2594,152 @@ Resolve an active alert. Changes status to `RESOLVED` and records who resolved i
 
 ---
 
+### 11. Recordatorios
+
+All endpoints under `/api/recordatorios`.
+
+#### GET `/api/recordatorios` — JWT
+
+List all reminders for a given patient, ordered by scheduled date ascending.
+
+**Query parameters:**
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `patientId` | UUID | Yes | Filter by patient |
+
+**Response `200 OK`:**
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440500",
+    "patientId": "550e8400-e29b-41d4-a716-446655440000",
+    "contactId": "550e8400-e29b-41d4-a716-446655440010",
+    "type": "LABORATORIO",
+    "description": "Hemograma completo",
+    "scheduledDate": "2026-06-15",
+    "status": "PENDIENTE",
+    "notes": "Recordatorio para el paciente",
+    "createdAt": "2025-06-10T10:00:00",
+    "updatedAt": "2025-06-10T10:00:00"
+  }
+]
+```
+
+**Status codes:** `200` — Success
+
+---
+
+#### POST `/api/recordatorios` — ADMIN
+
+Create a new reminder for a patient.
+
+**Request body:**
+```json
+{
+  "patientId": "550e8400-e29b-41d4-a716-446655440000",
+  "contactId": "550e8400-e29b-41d4-a716-446655440010",
+  "type": "LABORATORIO",
+  "description": "Hemograma completo",
+  "scheduledDate": "2026-06-15",
+  "notes": "Recordatorio para el paciente"
+}
+```
+
+**Response `201 Created`:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440500",
+  "patientId": "550e8400-e29b-41d4-a716-446655440000",
+  "contactId": "550e8400-e29b-41d4-a716-446655440010",
+  "type": "LABORATORIO",
+  "description": "Hemograma completo",
+  "scheduledDate": "2026-06-15",
+  "status": "PENDIENTE",
+  "notes": "Recordatorio para el paciente",
+  "createdAt": "2025-06-10T10:00:00",
+  "updatedAt": "2025-06-10T10:00:00"
+}
+```
+
+**Status codes:** `201` — Created | `400` — Validation error | `404` — Patient/Contact not found
+
+---
+
+#### PUT `/api/recordatorios/{id}` — ADMIN
+
+Update a reminder. All fields optional.
+
+**Path parameters:** `id` — UUID
+
+**Request body:**
+```json
+{
+  "type": "IMAGEN",
+  "description": "Tomografía de tórax",
+  "scheduledDate": "2026-06-20",
+  "notes": "Actualizado"
+}
+```
+
+**Response `200 OK`:** Updated ReminderResponse.
+
+**Status codes:** `200` — Success | `404` — Not found
+
+---
+
+#### DELETE `/api/recordatorios/{id}` — ADMIN
+
+Delete a reminder.
+
+**Path parameters:** `id` — UUID
+
+**Response `204 No Content`**
+
+**Status codes:** `204` — Deleted | `404` — Not found
+
+---
+
+#### POST `/api/recordatorios/{id}/complete` — ADMIN
+
+Mark a reminder as completed. Changes status to `COMPLETADO`.
+
+**Path parameters:** `id` — UUID
+
+**Response `200 OK`:** Updated ReminderResponse with status `COMPLETADO`.
+
+**Status codes:** `200` — Completed | `404` — Not found | `400` — Invalid state transition (already completed/canceled)
+
+---
+
+#### POST `/api/recordatorios/{id}/cancel` — ADMIN
+
+Cancel a reminder. Changes status to `CANCELADO`.
+
+**Path parameters:** `id` — UUID
+
+**Response `200 OK`:** Updated ReminderResponse with status `CANCELADO`.
+
+**Status codes:** `200` — Canceled | `404` — Not found | `400` — Invalid state transition (already completed/canceled)
+
+---
+
+### ReminderResponse — Field Reference
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Reminder ID |
+| `patientId` | UUID | Patient ID |
+| `contactId` | UUID | Contact ID that originated the reminder |
+| `type` | ReminderType | Type of reminder |
+| `description` | String | Description of the reminder |
+| `scheduledDate` | LocalDate | Scheduled date |
+| `status` | ReminderStatus | `PENDIENTE`, `COMPLETADO`, or `CANCELADO` |
+| `notes` | String or null | Optional notes |
+| `createdAt` | LocalDateTime | Timestamp |
+| `updatedAt` | LocalDateTime | Last updated |
+
+---
+
 ## Endpoint Summary
 
 | # | Method | Path | Auth | Description |
@@ -2660,6 +2826,13 @@ Resolve an active alert. Changes status to `RESOLVED` and records who resolved i
 | 71 | PUT | `/api/alerts/{id}` | ADMIN | Update alert |
 | 72 | DELETE | `/api/alerts/{id}` | ADMIN | Delete alert |
 | 73 | POST | `/api/alerts/{id}/resolve` | ADMIN | Resolve alert |
+| | | **Recordatorios** | | |
+| 74 | GET | `/api/recordatorios` | JWT | List reminders by patient |
+| 75 | POST | `/api/recordatorios` | ADMIN | Create reminder |
+| 76 | PUT | `/api/recordatorios/{id}` | ADMIN | Update reminder |
+| 77 | DELETE | `/api/recordatorios/{id}` | ADMIN | Delete reminder |
+| 78 | POST | `/api/recordatorios/{id}/complete` | ADMIN | Complete reminder |
+| 79 | POST | `/api/recordatorios/{id}/cancel` | ADMIN | Cancel reminder |
 
 ---
 
