@@ -796,7 +796,8 @@ This is the primary endpoint for the agent workflow. It handles two scenarios:
     "endDate": null,
     "isCurrent": true,
     "changeReason": "Plan de tratamiento inicial",
-    "notReceivingReason": null
+    "notReceivingReason": null,
+    "treatmentSituation": "EN_PROCESO"
   },
   "medicalAppointments": [
     {
@@ -1068,6 +1069,7 @@ Get treatment history for a patient.
     "isCurrent": true,
     "changeReason": "Plan de tratamiento inicial",
     "notReceivingReason": null,
+    "treatmentSituation": null,
     "createdAt": "2025-01-15T10:30:00",
     "contact": {
       "id": "550e8400-e29b-41d4-a716-446655440010",
@@ -1078,7 +1080,6 @@ Get treatment history for a patient.
     }
   }
 ]
-```
 
 **Status codes:** `200` — Success | `404` — Patient not found
 
@@ -1102,6 +1103,7 @@ Add a treatment record for a patient.
   "isCurrent": true,
   "changeReason": "Plan de tratamiento inicial",
   "notReceivingReason": null,
+  "treatmentSituation": "EN_PROCESO",
   "contactId": "550e8400-e29b-41d4-a716-446655440010"
 }
 ```
@@ -1109,243 +1111,6 @@ Add a treatment record for a patient.
 **Response `201 Created`:** Updated PatientResponse with new treatment record.
 
 **Status codes:** `201` — Created | `404` — Patient/Diagnosis/Contact not found
-
----
-
-#### GET `/api/patients/{id}/appointments` — JWT
-
-Get medical appointment history for a patient.
-
-**Path parameters:** `id` — UUID
-
-**Response `200 OK`:**
-```json
-[
-  {
-    "id": "550e8400-e29b-41d4-a716-446655440070",
-    "patientId": "550e8400-e29b-41d4-a716-446655440000",
-    "healthCenterId": "550e8400-e29b-41d4-a716-446655440020",
-    "healthCenterName": "Hospital Nacional",
-    "specialty": "Oncología",
-    "appointmentDate": "2025-02-01",
-    "nextAppointmentDate": "2025-03-01",
-    "hasReferralSheet": true,
-    "referredTo": "Hospital Nacional",
-    "difficulties": "Ninguna",
-    "createdAt": "2025-01-15T10:30:00",
-    "contact": {
-      "id": "550e8400-e29b-41d4-a716-446655440010",
-      "agentName": "Juan Pérez",
-      "type": "CALL",
-      "status": "COMPLETED",
-      "purpose": "ENROLLMENT"
-    }
-  }
-]
-```
-
-**Status codes:** `200` — Success | `404` — Patient not found
-
----
-
-#### POST `/api/patients/{id}/appointments` — JWT
-
-Add a medical appointment for a patient.
-
-**Path parameters:** `id` — UUID
-
-**Request body:**
-```json
-{
-  "healthCenterId": "550e8400-e29b-41d4-a716-446655440020",
-  "specialty": "Oncología",
-  "appointmentDate": "2025-02-01",
-  "nextAppointmentDate": "2025-03-01",
-  "hasReferralSheet": true,
-  "referredTo": "Hospital Nacional",
-  "difficulties": "Ninguna",
-  "contactId": "550e8400-e29b-41d4-a716-446655440010"
-}
-```
-
-**Response `201 Created`:** Updated PatientResponse with new appointment.
-
-**Status codes:** `201` — Created | `404` — Patient/Contact not found
-
----
-
-#### GET `/api/patients/{id}/sis` — JWT
-
-Get SIS (Seguro Integral de Salud) affiliation history for a patient.
-
-**Path parameters:** `id` — UUID
-
-**Response `200 OK`:**
-```json
-[
-  {
-    "id": "550e8400-e29b-41d4-a716-446655440080",
-    "patientId": "550e8400-e29b-41d4-a716-446655440000",
-    "contactId": "550e8400-e29b-41d4-a716-446655440010",
-    "canAffiliate": true,
-    "expectedDate": "2025-02-15",
-    "cantAffiliateReason": null,
-    "affiliatedAt": "2025-02-10T09:00:00",
-    "createdAt": "2025-01-15T10:30:00"
-  }
-]
-```
-
-**Status codes:** `200` — Success | `404` — Patient not found
-
----
-
-#### POST `/api/patients/{id}/sis` — JWT
-
-Add a SIS affiliation record for a patient.
-
-**Path parameters:** `id` — UUID
-
-**Request body:**
-```json
-{
-  "canAffiliate": true,
-  "expectedDate": "2025-02-15",
-  "cantAffiliateReason": null,
-  "contactId": "550e8400-e29b-41d4-a716-446655440010"
-}
-```
-
-**Response `201 Created`:** Updated PatientResponse with new SIS record.
-
-**Status codes:** `201` — Created | `404` — Patient/Contact not found
-
----
-
-#### PATCH `/api/patients/{id}/sis/{sisId}/affiliate` — JWT
-
-Mark a SIS affiliation as completed (sets `affiliatedAt` timestamp).
-
-**Path parameters:**
-- `id` — UUID (patient)
-- `sisId` — UUID (SIS affiliation record)
-
-**Response `200 OK`:** Updated PatientResponse.
-
-**Status codes:** `200` — Success | `404` — Not found
-
----
-
-#### GET `/api/patients/companion/{companionId}/patients` — JWT
-
-Get all patients linked to a specific companion.
-
-**Path parameters:** `companionId` — UUID
-
-**Response `200 OK`:** List of PatientResponse.
-
-**Status codes:** `200` — Success | `404` — Companion not found
-
----
-
-#### GET `/api/patients/{id}/companions` — JWT
-
-Get companions (caregivers) linked to a patient.
-
-**Path parameters:** `id` — UUID
-
-**Response `200 OK`:**
-```json
-[
-  {
-    "companionId": "550e8400-e29b-41d4-a716-446655440030",
-    "companionFullName": "Carlos García",
-    "isPrimaryInformant": true
-  }
-]
-```
-
-**Status codes:** `200` — Success | `404` — Patient not found
-
----
-
-#### POST `/api/patients/{id}/companions` — JWT
-
-Link a companion (another patient with role `COMPANION`) to a patient.
-
-**Path parameters:** `id` — UUID (patient)
-
-**Request body:**
-```json
-{
-  "companionId": "550e8400-e29b-41d4-a716-446655440030",
-  "isPrimaryInformant": true
-}
-```
-
-**Response `201 Created`:** Updated PatientResponse with companion linked.
-
-**Status codes:** `201` — Created | `404` — Patient/Companion not found
-
----
-
-#### DELETE `/api/patients/{id}/companions/{companionId}` — JWT
-
-Unlink a companion from a patient.
-
-**Path parameters:**
-- `id` — UUID (patient)
-- `companionId` — UUID (companion)
-
-**Response `204 No Content`**
-
-**Status codes:** `204` — Unlinked | `404` — Not found
-
----
-
-#### GET `/api/patients/{id}/contacts` — JWT
-
-Get contact history entries related to this patient.
-
-Each contact can include an optional `serviceReferral` object with service/derivation follow-up data captured for that interaction.
-
-**Path parameters:** `id` — UUID
-
-**Response `200 OK`:**
-```json
-[
-  {
-    "id": "550e8400-e29b-41d4-a716-446655440010",
-    "agentName": "Juan Pérez",
-    "type": "CALL",
-    "status": "COMPLETED",
-    "purpose": "ENROLLMENT",
-    "scheduledAt": "2025-01-10T14:00:00",
-    "completedAt": "2025-01-10T14:30:00",
-    "notes": "Paciente contactada exitosamente",
-    "serviceReferral": {
-      "id": "550e8400-e29b-41d4-a716-446655440011",
-      "contactId": "550e8400-e29b-41d4-a716-446655440010",
-      "referredToSocialWorker": true,
-      "referredToSusalud": false,
-      "susaludRegistrationNumber": null,
-      "receivedFoodGuide": true,
-      "participatesInGam": false,
-      "programSatisfaction": "Agradece el acompanamiento recibido.",
-      "wellbeingChanges": "Refiere menos ansiedad y mejor organizacion familiar.",
-      "knowsAboutFissal": true,
-      "referredToPaus": false,
-      "referredToDae": false,
-      "referredToFissal": false,
-      "createdAt": "2025-01-10T14:30:00",
-      "updatedAt": "2025-01-10T14:30:00"
-    },
-    "createdAt": "2025-01-10T14:00:00"
-  }
-]
-```
-
-**Status codes:** `200` — Success | `404` — Patient not found
 
 ---
 
@@ -1457,6 +1222,7 @@ This is the full response shape returned by most patient endpoints:
       "isCurrent": true,
       "changeReason": "Plan de tratamiento inicial",
       "notReceivingReason": null,
+      "treatmentSituation": "EN_PROCESO",
       "createdAt": "2025-01-15T10:30:00",
       "contact": {
         "id": "550e8400-e29b-41d4-a716-446655440010",
@@ -1660,6 +1426,7 @@ This is the full response shape returned by most patient endpoints:
 | `isCurrent` | Boolean | Whether currently receiving |
 | `changeReason` | String or null | Reason for change |
 | `notReceivingReason` | String or null | Reason if not receiving treatment |
+| `treatmentSituation` | String or null | Current treatment situation |
 | `createdAt` | LocalDateTime | Timestamp |
 | `contact` | ContactSummary | Contact that recorded this |
 
