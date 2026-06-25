@@ -105,9 +105,11 @@ class PatientService(
      */
     fun createPatient(request: CreatePatientRequest): PatientResponse {
         val patient = createPatientEntity(request)
-        return patientRepository.save(patient).let { saved ->
+        return patientRepository.saveAndFlush(patient).let { saved ->
             markSummaryDirty(saved)
-            buildPatientResponse(saved)
+            patientRepository.flush()
+            val reloaded = patientRepository.findById(saved.id!!).orElseThrow()
+            buildPatientResponse(reloaded)
         }
     }
 

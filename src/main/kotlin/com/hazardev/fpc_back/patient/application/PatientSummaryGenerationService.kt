@@ -14,26 +14,22 @@ import java.util.UUID
 @Service
 class PatientSummaryGenerationService(
     private val payloadService: PatientSummaryPayloadService,
-    private val patientRepository: PatientRepository,
-    private val patientSummaryRepository: PatientSummaryRepository,
     private val geminiClient: GeminiClient,
-    private val properties: PatientSummaryProperties
+    private val stateService: PatientSummaryStateService
 ) {
-    private val logger = LoggerFactory.getLogger(PatientSummaryGenerationService::class.java)
-
     fun generate(patientId: UUID) {
         try {
             val payload = payloadService.buildSummaryPayload(patientId)
             val summaryJson = geminiClient.generatePatientSummary(payload.patientDataJson)
-            markSuccess(patientId, payload.sourceUpdatedAt, summaryJson)
+            stateService.markSuccess(patientId, payload.sourceUpdatedAt, summaryJson)
         } catch (ex: PatientSummaryGenerationException) {
             if (ex.temporary) {
-                markTemporaryFailure(patientId, ex)
+                stateService.markTemporaryFailure(patientId, ex)
             } else {
-                markPermanentFailure(patientId, ex)
+                stateService.markPermanentFailure(patientId, ex)
             }
         } catch (ex: Exception) {
-            markTemporaryFailure(
+            stateService.markTemporaryFailure(
                 patientId,
                 PatientSummaryGenerationException(
                     code = "UNEXPECTED_PROCESSING_ERROR",
@@ -44,6 +40,27 @@ class PatientSummaryGenerationService(
             )
         }
     }
+
+    fun markSuccess(patientId: UUID, sourceUpdatedAt: LocalDateTime?, summaryJson: String) {
+        stateService.markSuccess(patientId, sourceUpdatedAt, summaryJson)
+    }
+
+    fun markTemporaryFailure(patientId: UUID, ex: PatientSummaryGenerationException) {
+        stateService.markTemporaryFailure(patientId, ex)
+    }
+
+    fun markPermanentFailure(patientId: UUID, ex: PatientSummaryGenerationException) {
+        stateService.markPermanentFailure(patientId, ex)
+    }
+}
+
+@Service
+class PatientSummaryStateService(
+    private val patientRepository: PatientRepository,
+    private val patientSummaryRepository: PatientSummaryRepository,
+    private val properties: PatientSummaryProperties
+) {
+    private val logger = LoggerFactory.getLogger(PatientSummaryStateService::class.java)
 
     @Transactional
     fun markSuccess(patientId: UUID, sourceUpdatedAt: LocalDateTime?, summaryJson: String) {
