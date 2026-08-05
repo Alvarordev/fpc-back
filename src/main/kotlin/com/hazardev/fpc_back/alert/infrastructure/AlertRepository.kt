@@ -14,4 +14,6 @@ interface AlertRepository : JpaRepository<Alert, UUID> {
     fun findByStatus(status: AlertStatus): List<Alert>
 
     fun findByCreatedById(agentId: UUID): List<Alert>
+
+    fun findByTicketNumber(ticketNumber: String): Alert?
 }
