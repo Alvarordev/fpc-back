@@ -42,6 +42,15 @@ out/
 ### Secrets ###
 .env
 
+### Local dev tools & scripts (no subir al repo) ###
+plink.exe
+*.exe
+startup.log
+startup_out.log
+startup_err.log
+abrir-tunel.bat
+run-local.bat
+
 ### Agent Teams ###
 .atl/
 exploration.md

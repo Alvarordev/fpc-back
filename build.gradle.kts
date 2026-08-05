@@ -60,3 +60,26 @@ allOpen {
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
+
+// ─── Load .env for local development ────────────────────────────────────────
+tasks.named<org.springframework.boot.gradle.tasks.run.BootRun>("bootRun") {
+	val envFile = file(".env")
+	if (envFile.exists()) {
+		val envVars = mutableMapOf<String, String>()
+		envFile.readLines().forEach { line ->
+			val trimmed = line.trim()
+			if (trimmed.isNotEmpty() && !trimmed.startsWith("#") && trimmed.contains("=")) {
+				val idx = trimmed.indexOf('=')
+				val key = trimmed.substring(0, idx).trim()
+				val value = trimmed.substring(idx + 1).trim()
+				envVars[key] = value
+			}
+		}
+		// Map DEV-specific keys to the names expected by application-dev.properties
+		envVars["DB_URL_DEV"]?.let     { envVars["DB_URL"] = it }
+		envVars["DB_PASSWORD_DEV"]?.let { envVars["DB_PASSWORD"] = it }
+		envVars["JWT_SECRET_DEV"]?.let  { envVars["JWT_SECRET"] = it }
+
+		environment(envVars)
+	}
+}
