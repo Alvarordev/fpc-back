@@ -1,6 +1,8 @@
 package com.hazardev.fpc_back.alert.api
 
 import com.hazardev.fpc_back.alert.application.AlertService
+import com.hazardev.fpc_back.alert.application.dto.AddAlertEventRequest
+import com.hazardev.fpc_back.alert.application.dto.AlertEventResponse
 import com.hazardev.fpc_back.alert.application.dto.AlertResponse
 import com.hazardev.fpc_back.alert.application.dto.CreateAlertRequest
 import com.hazardev.fpc_back.alert.application.dto.ResolveAlertRequest
@@ -33,7 +35,14 @@ class AlertController(
     ): List<AlertResponse> {
         return when {
             healthCenterId != null -> alertService.getAlertsByHealthCenter(healthCenterId)
-            status != null && status.uppercase() == "ACTIVE" -> alertService.getActiveAlerts()
+            status != null -> {
+                try {
+                    val alertStatus = com.hazardev.fpc_back.shared.domain.AlertStatus.valueOf(status.uppercase())
+                    alertService.getAlertsByStatus(alertStatus)
+                } catch (e: Exception) {
+                    alertService.getAllAlerts()
+                }
+            }
             agentId != null -> alertService.getAlertsByAgent(agentId)
             else -> alertService.getAllAlerts()
         }
@@ -44,15 +53,29 @@ class AlertController(
         return alertService.getAlertById(id)
     }
 
+    /**
+     * Public / Bot-accessible endpoint for WhatsApp Bot tracking by Ticket Number (e.g. ALT-2026-1001)
+     */
+    @GetMapping("/ticket/{ticketNumber}")
+    fun getAlertByTicketNumber(@PathVariable ticketNumber: String): Map<String, Any?> {
+        val alert = alertService.getAlertByTicketNumber(ticketNumber)
+        val events = alertService.getAlertEvents(alert.id)
+        return mapOf(
+            "alert" to alert,
+            "events" to events,
+            "totalTimelineEvents" to events.size
+        )
+    }
+
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AGENT')")
     fun createAlert(@RequestBody request: CreateAlertRequest): ResponseEntity<AlertResponse> {
         val response = alertService.createAlert(request)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AGENT')")
     fun updateAlert(
         @PathVariable id: UUID,
         @RequestBody request: UpdateAlertRequest
@@ -68,12 +91,38 @@ class AlertController(
     }
 
     @PostMapping("/{id}/resolve")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AGENT')")
     fun resolveAlert(
         @PathVariable id: UUID,
         @RequestBody request: ResolveAlertRequest
     ): ResponseEntity<AlertResponse> {
         val response = alertService.resolveAlert(id, request)
+        return ResponseEntity.ok(response)
+    }
+
+    // ============================================================
+    // Timeline Events & AI Summary Endpoints
+    // ============================================================
+
+    @GetMapping("/{id}/events")
+    fun getAlertEvents(@PathVariable id: UUID): List<AlertEventResponse> {
+        return alertService.getAlertEvents(id)
+    }
+
+    @PostMapping("/{id}/events")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AGENT')")
+    fun addAlertEvent(
+        @PathVariable id: UUID,
+        @RequestBody request: AddAlertEventRequest
+    ): ResponseEntity<AlertEventResponse> {
+        val response = alertService.addAlertEvent(id, request)
+        return ResponseEntity.status(HttpStatus.CREATED).body(response)
+    }
+
+    @PostMapping("/{id}/ai-summary")
+    @PreAuthorize("hasAnyRole('ADMIN', 'AGENT')")
+    fun generateAISummary(@PathVariable id: UUID): ResponseEntity<AlertResponse> {
+        val response = alertService.generateAISummary(id)
         return ResponseEntity.ok(response)
     }
 }
