@@ -14,6 +14,7 @@ import jakarta.persistence.Table
 import org.hibernate.annotations.CreationTimestamp
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.UUID
 
 @Entity
@@ -40,6 +41,9 @@ class PatientMedicalAppointment(
 
     @Column(name = "appointment_date", nullable = true)
     var appointmentDate: LocalDate? = null,
+
+    @Column(name = "appointment_time", nullable = true)
+    var appointmentTime: LocalTime? = null,
 
     @Column(name = "next_appointment_date", nullable = true)
     var nextAppointmentDate: LocalDate? = null,

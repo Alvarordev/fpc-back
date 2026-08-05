@@ -1,5 +1,6 @@
 package com.hazardev.fpc_back.patient.application.dto
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.hazardev.fpc_back.shared.domain.AffiliationType
 import com.hazardev.fpc_back.shared.domain.CancerStage
 import com.hazardev.fpc_back.shared.domain.ContactPurpose
@@ -13,6 +14,7 @@ import com.hazardev.fpc_back.shared.domain.PatientStatus
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.UUID
 
 data class ContactSummary(
@@ -76,10 +78,6 @@ data class PatientResponse(
     val symptomReports: List<SymptomReportResponse>
 )
 
-/**
- * Request to enroll a patient by creating their detailed record.
- * Triggers status change from PROSPECT to ENROLLED.
- */
 data class EnrollPatientRequest(
     val birthDepartment: String? = null,
     val currentAddress: String? = null,
@@ -96,25 +94,21 @@ data class EnrollPatientRequest(
     val requiresTranslation: Boolean = false
 )
 
-    /**
-     * Request with PatientDetails fields for full enrollment flow.
-     * Mirrors [EnrollPatientRequest] but used as a sub-object of [FullEnrollmentRequest].
-     */
-    data class EnrollPatientDetailsRequest(
-        val birthDepartment: String? = null,
-        val currentAddress: String? = null,
-        val currentDistrict: String? = null,
-        val currentDepartment: String? = null,
-        val dniMatchesAddress: Boolean? = null,
-        val travelTimeToHospital: String? = null,
-        val emergencyContactName: String? = null,
-        val emergencyContactPhone: String? = null,
-        val zoneType: String? = null,
-        val emergencyContactGender: String? = null,
-        val educationLevel: EducationLevel? = null,
-        val nativeLanguage: String? = null,
-        val requiresTranslation: Boolean = false
-    )
+data class EnrollPatientDetailsRequest(
+    val birthDepartment: String? = null,
+    val currentAddress: String? = null,
+    val currentDistrict: String? = null,
+    val currentDepartment: String? = null,
+    val dniMatchesAddress: Boolean? = null,
+    val travelTimeToHospital: String? = null,
+    val emergencyContactName: String? = null,
+    val emergencyContactPhone: String? = null,
+    val zoneType: String? = null,
+    val emergencyContactGender: String? = null,
+    val educationLevel: EducationLevel? = null,
+    val nativeLanguage: String? = null,
+    val requiresTranslation: Boolean = false
+)
 
 data class UpdatePatientDetailsRequest(
     val birthDepartment: String? = null,
@@ -251,13 +245,42 @@ data class AddMedicalAppointmentRequest(
     val contactId: UUID? = null
 )
 
+data class CreateStandaloneAppointmentRequest(
+    val patientId: UUID,
+    val healthCenterId: UUID? = null,
+    val specialty: String? = null,
+    val appointmentDate: LocalDate? = null,
+    val appointmentTime: LocalTime? = null,
+    val nextAppointmentDate: LocalDate? = null,
+    @get:JsonProperty("hasReferralSheet") @param:JsonProperty("hasReferralSheet") val hasReferralSheet: Boolean? = false,
+    val referredTo: String? = null,
+    val difficulties: String? = null,
+    @get:JsonProperty("isFirstConsultation") @param:JsonProperty("isFirstConsultation") val isFirstConsultation: Boolean? = false
+)
+
+data class UpdateMedicalAppointmentRequest(
+    val healthCenterId: UUID? = null,
+    val specialty: String? = null,
+    val appointmentDate: LocalDate? = null,
+    val appointmentTime: LocalTime? = null,
+    val nextAppointmentDate: LocalDate? = null,
+    @get:JsonProperty("hasReferralSheet") @param:JsonProperty("hasReferralSheet") val hasReferralSheet: Boolean? = null,
+    val referredTo: String? = null,
+    val difficulties: String? = null,
+    @get:JsonProperty("isFirstConsultation") @param:JsonProperty("isFirstConsultation") val isFirstConsultation: Boolean? = null
+)
+
 data class MedicalAppointmentResponse(
     val id: UUID,
     val patientId: UUID,
+    val patientFullName: String,
+    val patientDni: String?,
+    val patientPhone: String?,
     val healthCenterId: UUID?,
     val healthCenterName: String?,
     val specialty: String?,
     val appointmentDate: LocalDate?,
+    val appointmentTime: LocalTime?,
     val nextAppointmentDate: LocalDate?,
     val hasReferralSheet: Boolean,
     val referredTo: String?,
@@ -305,25 +328,6 @@ data class ContactResponse(
     val createdAt: LocalDateTime
 )
 
-/**
- * Composite request for atomically creating/enrolling a patient
- * in a single transaction. All sub-entities (details, insurance,
- * diagnosis, treatment, appointments, SIS, companions) are
- * processed together. The enrollment contact is resolved/created
- * automatically — no contactId is required anywhere in the request.
- *
- * @property patientId If provided, enrolls an existing patient;
- *                     if null, a new patient is created from [patientData]
- * @property patientData Required when [patientId] is null
- * @property details PatientDetails — required for enrollment
- * @property insurance Optional insurance record
- * @property diagnosis Optional diagnosis record
- * @property treatment Optional treatment record (requires diagnosis)
- * @property medicalAppointments Optional list of appointments
- * @property sisAffiliation Optional SIS affiliation (processed only when
- *                          no real insurance exists)
- * @property companions Optional list of companions to link
- */
 data class FullEnrollmentRequest(
     val patientId: UUID?,
     val patientData: CreatePatientRequest?,
@@ -338,13 +342,6 @@ data class FullEnrollmentRequest(
     val symptomReport: SymptomReportRequest? = null
 )
 
-/**
- * Request DTO for enrollment wizard metadata.
- *
- * Fields like [caseComments], [startTime], [endTime], and [agentId] are used
- * for the enrollment Contact lifecycle. The remaining fields map to the
- * [com.hazardev.fpc_back.patient.domain.Enrollment] entity.
- */
 data class EnrollmentMetadataRequest(
     val caseComments: String? = null,
     val startTime: Instant? = null,
@@ -360,11 +357,6 @@ data class EnrollmentMetadataRequest(
     val agentId: UUID? = null
 )
 
-/**
- * Response DTO for an enrollment record.
- * Mirrors the [com.hazardev.fpc_back.patient.domain.Enrollment] entity fields
- * plus relational identifiers.
- */
 data class EnrollmentMetadataResponse(
     val id: UUID,
     val patientId: UUID,
@@ -385,9 +377,6 @@ data class EnrollmentMetadataResponse(
     val createdAt: LocalDateTime
 )
 
-/**
- * Request DTO for wizard symptom report data.
- */
 data class SymptomReportRequest(
     val hasDiscomfort: Boolean = false,
     val signsAndSymptoms: String? = null,
@@ -398,11 +387,6 @@ data class SymptomReportRequest(
     val indicationsReceived: String? = null
 )
 
-/**
- * Response DTO for a patient symptom report.
- * Mirrors the [com.hazardev.fpc_back.patient.domain.PatientSymptomReport] entity fields
- * plus relational identifiers.
- */
 data class SymptomReportResponse(
     val id: UUID,
     val patientId: UUID,

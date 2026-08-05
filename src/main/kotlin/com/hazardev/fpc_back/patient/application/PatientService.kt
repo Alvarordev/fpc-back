@@ -57,6 +57,7 @@ import com.hazardev.fpc_back.shared.domain.ContactType
 import com.hazardev.fpc_back.shared.domain.InsuranceType
 import com.hazardev.fpc_back.shared.domain.PatientRole
 import com.hazardev.fpc_back.shared.domain.PatientStatus
+import com.hazardev.fpc_back.shared.service.N8nWebhookService
 import jakarta.persistence.EntityNotFoundException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -94,7 +95,8 @@ class PatientService(
     private val healthCenterRepository: HealthCenterRepository,
     private val enrollmentRepository: EnrollmentRepository,
     private val patientSymptomReportRepository: PatientSymptomReportRepository,
-    private val agentRepository: AgentRepository
+    private val agentRepository: AgentRepository,
+    private val n8nWebhookService: N8nWebhookService
 ) {
 
     /**
@@ -110,6 +112,17 @@ class PatientService(
     fun createPatient(request: CreatePatientRequest): PatientResponse {
         val patient = createPatientEntity(request)
         return patientRepository.save(patient).let { saved ->
+            // Extract data within @Transactional scope before async dispatch
+            val condicion = if (saved.role == PatientRole.COMPANION) "acompañante" else "paciente"
+            n8nWebhookService.notifyPatientRegistered(
+                nombre      = saved.fullName,
+                dni         = saved.dni ?: "",
+                celular     = saved.primaryPhone,
+                correo      = "",
+                diagnostico = "En evaluación",
+                condicion   = condicion,
+                ref         = saved.id.toString()
+            )
             buildPatientResponse(saved)
         }
     }
@@ -553,7 +566,19 @@ class PatientService(
             isFirstConsultation = request.isFirstConsultation
         )
 
-        patientMedicalAppointmentRepository.save(appointment)
+        val saved = patientMedicalAppointmentRepository.save(appointment)
+        // Extract data within @Transactional scope before async dispatch
+        n8nWebhookService.notifyAppointmentCreated(
+            nombre      = patient.fullName,
+            dni         = patient.dni ?: "",
+            celular     = patient.primaryPhone,
+            correo      = "",
+            motivo      = saved.difficulties ?: "Cita médica programada",
+            fecha       = saved.appointmentDate?.toString() ?: "",
+            hora        = saved.appointmentTime?.toString()?.substring(0, 5) ?: "",
+            especialidad = saved.specialty ?: "General",
+            ref         = saved.id.toString()
+        )
         return buildPatientResponse(patient)
     }
 
@@ -568,6 +593,102 @@ class PatientService(
         return patientMedicalAppointmentRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
             .map { it.toResponse() }
     }
+
+    /**
+     * List ALL medical appointments across all patients for global management.
+     */
+    @Transactional(readOnly = true)
+    fun getAllMedicalAppointments(): List<MedicalAppointmentResponse> {
+        return patientMedicalAppointmentRepository.findAll()
+            .sortedByDescending { it.appointmentDate ?: it.createdAt?.toLocalDate() }
+            .map { it.toResponse() }
+    }
+
+    /**
+     * Create a standalone medical appointment record from global appointments panel.
+     */
+    @Transactional
+    fun createStandaloneMedicalAppointment(
+        request: com.hazardev.fpc_back.patient.application.dto.CreateStandaloneAppointmentRequest
+    ): MedicalAppointmentResponse {
+        val patient = findPatientOrThrow(request.patientId)
+
+        val contact = contactRepository.findByPatientIdOrderByCreatedAtDesc(patient.id!!)
+            .firstOrNull()
+            ?: contactRepository.save(
+                Contact(
+                    patient = patient,
+                    type = ContactType.IN_PERSON,
+                    status = ContactStatus.COMPLETED,
+                    purpose = ContactPurpose.FOLLOW_UP,
+                    notes = "Cita registrada desde panel web"
+                )
+            )
+
+        val healthCenter = request.healthCenterId?.let { id ->
+            healthCenterRepository.findById(id)
+                .orElseThrow { EntityNotFoundException("HealthCenter not found with id: $id") }
+        }
+
+        val appointment = PatientMedicalAppointment(
+            patient = patient,
+            contact = contact,
+            healthCenter = healthCenter,
+            specialty = request.specialty,
+            appointmentDate = request.appointmentDate,
+            appointmentTime = request.appointmentTime,
+            nextAppointmentDate = request.nextAppointmentDate,
+            hasReferralSheet = request.hasReferralSheet ?: false,
+            referredTo = request.referredTo,
+            difficulties = request.difficulties,
+            isFirstConsultation = request.isFirstConsultation ?: false
+        )
+
+        val saved = patientMedicalAppointmentRepository.saveAndFlush(appointment)
+        // Extract data within @Transactional scope before async dispatch
+        n8nWebhookService.notifyAppointmentCreated(
+            nombre      = patient.fullName,
+            dni         = patient.dni ?: "",
+            celular     = patient.primaryPhone,
+            correo      = "",
+            motivo      = saved.difficulties ?: "Cita médica programada",
+            fecha       = saved.appointmentDate?.toString() ?: "",
+            hora        = saved.appointmentTime?.toString()?.substring(0, 5) ?: "",
+            especialidad = saved.specialty ?: "General",
+            ref         = saved.id.toString()
+        )
+        return saved.toResponse()
+    }
+
+    /**
+     * Update an existing medical appointment record.
+     */
+    @Transactional
+    fun updateMedicalAppointment(
+        appointmentId: UUID,
+        request: com.hazardev.fpc_back.patient.application.dto.UpdateMedicalAppointmentRequest
+    ): MedicalAppointmentResponse {
+        val appointment = patientMedicalAppointmentRepository.findById(appointmentId)
+            .orElseThrow { EntityNotFoundException("Medical appointment not found with id: $appointmentId") }
+
+        if (request.healthCenterId != null) {
+            val healthCenter = healthCenterRepository.findById(request.healthCenterId)
+                .orElseThrow { EntityNotFoundException("HealthCenter not found with id: ${request.healthCenterId}") }
+            appointment.healthCenter = healthCenter
+        }
+        request.specialty?.let { appointment.specialty = it }
+        request.appointmentDate?.let { appointment.appointmentDate = it }
+        request.appointmentTime?.let { appointment.appointmentTime = it }
+        request.nextAppointmentDate?.let { appointment.nextAppointmentDate = it }
+        request.hasReferralSheet?.let { appointment.hasReferralSheet = it }
+        request.referredTo?.let { appointment.referredTo = it }
+        request.difficulties?.let { appointment.difficulties = it }
+        request.isFirstConsultation?.let { appointment.isFirstConsultation = it }
+
+        val saved = patientMedicalAppointmentRepository.saveAndFlush(appointment)
+        return saved.toResponse()
+    }
+
 
     /**
      * Add a SIS affiliation attempt record for a patient.
@@ -863,7 +984,19 @@ class PatientService(
         }
 
         patient.status = PatientStatus.ENROLLED
-        patientRepository.save(patient)
+        val savedPatient = patientRepository.save(patient)
+
+        val diagStr = request.diagnosis?.diagnosis ?: "En evaluación"
+        val condicion = if (savedPatient.role == PatientRole.COMPANION) "acompañante" else "paciente"
+        n8nWebhookService.notifyPatientRegistered(
+            nombre      = savedPatient.fullName,
+            dni         = savedPatient.dni ?: "",
+            celular     = savedPatient.primaryPhone,
+            correo      = "",
+            diagnostico = diagStr,
+            condicion   = condicion,
+            ref         = savedPatient.id.toString()
+        )
 
         return getPatient(patientId)
     }
@@ -1178,16 +1311,20 @@ class PatientService(
         MedicalAppointmentResponse(
             id = id!!,
             patientId = patient.id!!,
+            patientFullName = patient.fullName,
+            patientDni = patient.dni,
+            patientPhone = patient.primaryPhone,
             healthCenterId = healthCenter?.id,
             healthCenterName = healthCenter?.name,
             specialty = specialty,
             appointmentDate = appointmentDate,
+            appointmentTime = appointmentTime,
             nextAppointmentDate = nextAppointmentDate,
             hasReferralSheet = hasReferralSheet,
             referredTo = referredTo,
             difficulties = difficulties,
             isFirstConsultation = isFirstConsultation,
-            createdAt = createdAt!!,
+            createdAt = createdAt ?: LocalDateTime.now(),
             contact = contact.toSummary()
         )
 
