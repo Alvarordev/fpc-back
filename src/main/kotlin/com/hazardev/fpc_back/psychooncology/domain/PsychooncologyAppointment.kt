@@ -23,14 +23,6 @@ import org.hibernate.annotations.UpdateTimestamp
 import java.time.LocalDateTime
 import java.util.UUID
 
-/**
- * Psycho-oncology appointment scheduled by an agent from a contact,
- * using an available volunteer slot.
- *
- * Business rules:
- * - isAdditionalSession can only be true when sessionNumber > 4
- * - Post-session fields are filled by the volunteer after completing the session
- */
 @Entity
 @Table(name = "psychooncology_appointments")
 class PsychooncologyAppointment(

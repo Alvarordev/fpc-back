@@ -72,6 +72,9 @@ class Enrollment(
     @Column(name = "survey_accepted", nullable = false)
     var surveyAccepted: Boolean = false,
 
+    @Column(name = "wants_psychooncology_support", nullable = true)
+    var wantsPsychooncologySupport: Boolean? = null,
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     val createdAt: LocalDateTime? = null

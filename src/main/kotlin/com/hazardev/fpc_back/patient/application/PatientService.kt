@@ -1,8 +1,11 @@
 package com.hazardev.fpc_back.patient.application
 
 import com.hazardev.fpc_back.agent.infrastructure.AgentRepository
+import com.hazardev.fpc_back.contact.application.dto.ContactServiceReferralResponse
 import com.hazardev.fpc_back.contact.domain.Contact
+import com.hazardev.fpc_back.contact.domain.ContactServiceReferral
 import com.hazardev.fpc_back.contact.infrastructure.ContactRepository
+import com.hazardev.fpc_back.contact.infrastructure.ContactServiceReferralRepository
 import com.hazardev.fpc_back.healthcenter.infrastructure.HealthCenterRepository
 import com.hazardev.fpc_back.patient.application.dto.AddDiagnosisRequest
 import com.hazardev.fpc_back.patient.application.dto.AddInsuranceRequest
@@ -16,14 +19,16 @@ import com.hazardev.fpc_back.patient.application.dto.CreatePatientRequest
 import com.hazardev.fpc_back.patient.application.dto.DiagnosisRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.DiagnosisSummary
 import com.hazardev.fpc_back.patient.application.dto.EnrollPatientDetailsRequest
-import com.hazardev.fpc_back.patient.application.dto.EnrollPatientRequest
 import com.hazardev.fpc_back.patient.application.dto.EnrollmentMetadataRequest
 import com.hazardev.fpc_back.patient.application.dto.EnrollmentMetadataResponse
+import com.hazardev.fpc_back.patient.application.dto.FamilyPreventionTalkInterestRequest
+import com.hazardev.fpc_back.patient.application.dto.FamilyPreventionTalkInterestResponse
 import com.hazardev.fpc_back.patient.application.dto.FullEnrollmentRequest
 import com.hazardev.fpc_back.patient.application.dto.InsuranceRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.MedicalAppointmentResponse
 import com.hazardev.fpc_back.patient.application.dto.PatientDetailsResponse
 import com.hazardev.fpc_back.patient.application.dto.PatientResponse
+import com.hazardev.fpc_back.patient.application.dto.PatientSummaryResponse
 import com.hazardev.fpc_back.patient.application.dto.SisAffiliationResponse
 import com.hazardev.fpc_back.patient.application.dto.SymptomReportRequest
 import com.hazardev.fpc_back.patient.application.dto.SymptomReportResponse
@@ -35,6 +40,7 @@ import com.hazardev.fpc_back.patient.domain.Enrollment
 import com.hazardev.fpc_back.patient.domain.Patient
 import com.hazardev.fpc_back.patient.domain.PatientDetails
 import com.hazardev.fpc_back.patient.domain.PatientDiagnosis
+import com.hazardev.fpc_back.patient.domain.PatientFamilyPreventionTalkInterest
 import com.hazardev.fpc_back.patient.domain.PatientInsurance
 import com.hazardev.fpc_back.patient.domain.PatientMedicalAppointment
 import com.hazardev.fpc_back.patient.domain.PatientSisAffiliation
@@ -44,6 +50,7 @@ import com.hazardev.fpc_back.patient.infrastructure.CompanionPatientRepository
 import com.hazardev.fpc_back.patient.infrastructure.EnrollmentRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientDetailsRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientDiagnosisRepository
+import com.hazardev.fpc_back.patient.infrastructure.PatientFamilyPreventionTalkInterestRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientInsuranceRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientMedicalAppointmentRepository
 import com.hazardev.fpc_back.patient.infrastructure.PatientRepository
@@ -65,21 +72,6 @@ import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.UUID
 
-/**
- * Centralized service for managing Patient entities and all their related sub-entities.
- *
- * This service is the single entry point for all patient CRUD operations,
- * including insurance history, diagnosis tracking, treatments, medical appointments,
- * SIS affiliation attempts, companion linking, and contact history.
- *
- * Business rules enforced:
- * - Never hard-delete: patients are deactivated by changing status to INACTIVE
- * - Strict status transitions: PROSPECT -> ENROLLED -> ACTIVE -> INACTIVE
- * - Current flag management: setting isCurrent=true on a new record sets all
- *   previous records for that patient to isCurrent=false
- * - DNI uniqueness validation on creation/update
- * - Referenced entity existence validation (Contact, HealthCenter, etc.)
- */
 @Service
 @Transactional
 class PatientService(
@@ -87,16 +79,20 @@ class PatientService(
     private val patientDetailsRepository: PatientDetailsRepository,
     private val patientInsuranceRepository: PatientInsuranceRepository,
     private val patientDiagnosisRepository: PatientDiagnosisRepository,
+    private val patientFamilyPreventionTalkInterestRepository: PatientFamilyPreventionTalkInterestRepository,
     private val patientTreatmentRepository: PatientTreatmentRepository,
     private val patientMedicalAppointmentRepository: PatientMedicalAppointmentRepository,
     private val patientSisAffiliationRepository: PatientSisAffiliationRepository,
     private val companionPatientRepository: CompanionPatientRepository,
     private val contactRepository: ContactRepository,
+    private val contactServiceReferralRepository: ContactServiceReferralRepository,
     private val healthCenterRepository: HealthCenterRepository,
     private val enrollmentRepository: EnrollmentRepository,
     private val patientSymptomReportRepository: PatientSymptomReportRepository,
     private val agentRepository: AgentRepository,
-    private val n8nWebhookService: N8nWebhookService
+    private val n8nWebhookService: N8nWebhookService,
+    private val patientSummaryDirtyMarker: PatientSummaryDirtyMarker,
+    private val patientSummaryQueryService: PatientSummaryQueryService
 ) {
 
     /**
@@ -111,8 +107,7 @@ class PatientService(
      */
     fun createPatient(request: CreatePatientRequest): PatientResponse {
         val patient = createPatientEntity(request)
-        return patientRepository.save(patient).let { saved ->
-            // Extract data within @Transactional scope before async dispatch
+        return patientRepository.saveAndFlush(patient).let { saved ->
             val condicion = if (saved.role == PatientRole.COMPANION) "acompañante" else "paciente"
             n8nWebhookService.notifyPatientRegistered(
                 nombre      = saved.fullName,
@@ -123,7 +118,10 @@ class PatientService(
                 condicion   = condicion,
                 ref         = saved.id.toString()
             )
-            buildPatientResponse(saved)
+            markSummaryDirty(saved)
+            patientRepository.flush()
+            val reloaded = patientRepository.findById(saved.id!!).orElseThrow()
+            buildPatientResponse(reloaded)
         }
     }
 
@@ -141,7 +139,7 @@ class PatientService(
     @Transactional(readOnly = true)
     fun getPatient(patientId: UUID): PatientResponse {
         val patient = findPatientOrThrow(patientId)
-        return buildPatientResponse(patient)
+        return buildPatientResponse(patient, includeSummary = true)
     }
 
     /**
@@ -211,7 +209,10 @@ class PatientService(
         request.gender?.let { patient.gender = it }
         request.role?.let { patient.role = it }
 
-        return patientRepository.save(patient).let { buildPatientResponse(it) }
+        return patientRepository.save(patient).let {
+            markSummaryDirty(it)
+            buildPatientResponse(it)
+        }
     }
 
     /**
@@ -244,7 +245,7 @@ class PatientService(
             PatientStatus.ACTIVE ->
                 newStatus == PatientStatus.INACTIVE
             PatientStatus.INACTIVE ->
-                true // allow reactivation to any status
+                true
         }
 
         if (!allowed) {
@@ -256,7 +257,10 @@ class PatientService(
         }
 
         patient.status = newStatus
-        return patientRepository.save(patient).let { buildPatientResponse(it) }
+        return patientRepository.save(patient).let {
+            markSummaryDirty(it)
+            buildPatientResponse(it)
+        }
     }
 
     /**
@@ -271,53 +275,7 @@ class PatientService(
         val patient = findPatientOrThrow(patientId)
         patient.status = PatientStatus.INACTIVE
         patientRepository.save(patient)
-    }
-
-    /**
-     * Enroll a patient by creating their detailed record.
-     *
-     * Automatically changes the patient status from PROSPECT to ENROLLED.
-     * A patient can only have one details record (enforced by unique constraint).
-     *
-     * @param patientId the patient ID
-     * @param request the enrollment data
-     * @return the complete patient response including the new details
-     * @throws EntityNotFoundException if the patient does not exist
-     * @throws IllegalStateException if the patient is not in PROSPECT status
-     */
-    fun enrollPatient(patientId: UUID, request: EnrollPatientRequest): PatientResponse {
-        val patient = findPatientOrThrow(patientId)
-
-        if (patient.status != PatientStatus.PROSPECT) {
-            throw IllegalStateException(
-                "Cannot enroll patient $patientId: current status is ${patient.status}, " +
-                    "expected PROSPECT"
-            )
-        }
-
-        val details = PatientDetails(
-            patient = patient,
-            birthDepartment = request.birthDepartment,
-            currentAddress = request.currentAddress,
-            currentDistrict = request.currentDistrict,
-            currentDepartment = request.currentDepartment,
-            dniMatchesAddress = request.dniMatchesAddress,
-            travelTimeToHospital = request.travelTimeToHospital,
-            emergencyContactName = request.emergencyContactName,
-            emergencyContactPhone = request.emergencyContactPhone,
-            zoneType = request.zoneType,
-            emergencyContactGender = request.emergencyContactGender,
-            educationLevel = request.educationLevel,
-            nativeLanguage = request.nativeLanguage,
-            requiresTranslation = request.requiresTranslation
-        )
-
-        patientDetailsRepository.save(details)
-
-        patient.status = PatientStatus.ENROLLED
-        patientRepository.save(patient)
-
-        return buildPatientResponse(patient)
+        markSummaryDirty(patient)
     }
 
     /**
@@ -355,9 +313,20 @@ class PatientService(
             educationLevel?.let { details.educationLevel = it }
             nativeLanguage?.let { details.nativeLanguage = it }
             requiresTranslation?.let { details.requiresTranslation = it }
+            referredToSocialWorker?.let { details.referredToSocialWorker = it }
+            evidenceOfDomesticViolence?.let { details.evidenceOfDomesticViolence = it }
+            usesWoodStove?.let { details.usesWoodStove = it }
+            isWorking?.let { details.isWorking = it }
+            receivesFinancialSupport?.let { details.receivesFinancialSupport = it }
+            programDropoutReason?.let { details.programDropoutReason = it }
+            programDropoutDate?.let { details.programDropoutDate = it }
+            hasConadisCard?.let { details.hasConadisCard = it }
+            knowsAboutFissal?.let { details.knowsAboutFissal = it }
+            isDeceased?.let { details.isDeceased = it }
         }
 
         patientDetailsRepository.save(details)
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -394,6 +363,7 @@ class PatientService(
         )
 
         patientInsuranceRepository.save(insurance)
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -451,6 +421,7 @@ class PatientService(
         )
 
         patientDiagnosisRepository.save(diagnosis)
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -517,6 +488,7 @@ class PatientService(
         )
 
         patientTreatmentRepository.save(treatment)
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -579,6 +551,7 @@ class PatientService(
             especialidad = saved.specialty ?: "General",
             ref         = saved.id.toString()
         )
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -713,6 +686,7 @@ class PatientService(
         )
 
         patientSisAffiliationRepository.save(affiliation)
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -741,6 +715,7 @@ class PatientService(
         sisRecord.affiliatedAt = LocalDateTime.now()
         patientSisAffiliationRepository.save(sisRecord)
 
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -808,6 +783,7 @@ class PatientService(
         )
 
         companionPatientRepository.save(link)
+        markSummaryDirty(patient)
         return buildPatientResponse(patient)
     }
 
@@ -827,6 +803,7 @@ class PatientService(
         )
 
         companionPatientRepository.delete(link)
+        markSummaryDirty(link.patient)
     }
 
     /**
@@ -983,6 +960,8 @@ class PatientService(
             )
         }
 
+        saveFamilyPreventionTalkInterests(patient, request.familyPreventionTalkInterests)
+
         patient.status = PatientStatus.ENROLLED
         val savedPatient = patientRepository.save(patient)
 
@@ -998,6 +977,7 @@ class PatientService(
             ref         = savedPatient.id.toString()
         )
 
+        markSummaryDirty(patient)
         return getPatient(patientId)
     }
 
@@ -1009,8 +989,13 @@ class PatientService(
      */
     @Transactional(readOnly = true)
     fun getContactHistory(patientId: UUID): List<ContactResponse> {
-        return contactRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
-            .map { it.toResponse() }
+        val contacts = contactRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
+        val serviceReferrals = contactServiceReferralRepository.findByContactIdIn(contacts.mapNotNull { it.id })
+            .associateBy { it.contact.id!! }
+
+        return contacts.map { contact ->
+            contact.toResponse(contact.id?.let(serviceReferrals::get))
+        }
     }
 
     private fun createPatientEntity(request: CreatePatientRequest): Patient {
@@ -1031,7 +1016,8 @@ class PatientService(
             hasWhatsapp = request.hasWhatsapp,
             gender = request.gender,
             role = request.role,
-            status = request.status ?: PatientStatus.PROSPECT
+            status = request.status ?: PatientStatus.PROSPECT,
+            summarySourceUpdatedAt = LocalDateTime.now()
         )
     }
 
@@ -1052,8 +1038,17 @@ class PatientService(
                 emergencyContactGender?.let { existingDetails.emergencyContactGender = it }
                 educationLevel?.let { existingDetails.educationLevel = it }
                 nativeLanguage?.let { existingDetails.nativeLanguage = it }
-                // requiresTranslation is non-nullable, always apply
                 existingDetails.requiresTranslation = requiresTranslation
+                referredToSocialWorker?.let { existingDetails.referredToSocialWorker = it }
+                evidenceOfDomesticViolence?.let { existingDetails.evidenceOfDomesticViolence = it }
+                usesWoodStove?.let { existingDetails.usesWoodStove = it }
+                isWorking?.let { existingDetails.isWorking = it }
+                receivesFinancialSupport?.let { existingDetails.receivesFinancialSupport = it }
+                programDropoutReason?.let { existingDetails.programDropoutReason = it }
+                programDropoutDate?.let { existingDetails.programDropoutDate = it }
+                hasConadisCard?.let { existingDetails.hasConadisCard = it }
+                knowsAboutFissal?.let { existingDetails.knowsAboutFissal = it }
+                isDeceased?.let { existingDetails.isDeceased = it }
             }
             patientDetailsRepository.save(existingDetails)
         } else {
@@ -1071,7 +1066,17 @@ class PatientService(
                 emergencyContactGender = request.emergencyContactGender,
                 educationLevel = request.educationLevel,
                 nativeLanguage = request.nativeLanguage,
-                requiresTranslation = request.requiresTranslation
+                requiresTranslation = request.requiresTranslation,
+                referredToSocialWorker = request.referredToSocialWorker,
+                evidenceOfDomesticViolence = request.evidenceOfDomesticViolence,
+                usesWoodStove = request.usesWoodStove,
+                isWorking = request.isWorking,
+                receivesFinancialSupport = request.receivesFinancialSupport,
+                programDropoutReason = request.programDropoutReason,
+                programDropoutDate = request.programDropoutDate,
+                hasConadisCard = request.hasConadisCard,
+                knowsAboutFissal = request.knowsAboutFissal,
+                isDeceased = request.isDeceased
             )
             patientDetailsRepository.save(details)
         }
@@ -1080,6 +1085,23 @@ class PatientService(
     private fun findPatientOrThrow(patientId: UUID): Patient {
         return patientRepository.findById(patientId)
             .orElseThrow { EntityNotFoundException("Patient not found with id: $patientId") }
+    }
+
+    private fun saveFamilyPreventionTalkInterests(
+        patient: Patient,
+        interests: List<FamilyPreventionTalkInterestRequest>?
+    ) {
+        interests?.forEach { interest ->
+            patientFamilyPreventionTalkInterestRepository.save(
+                PatientFamilyPreventionTalkInterest(
+                    patient = patient,
+                    talkName = interest.talkName,
+                    familyMemberName = interest.familyMemberName,
+                    familyMemberPhone = interest.familyMemberPhone,
+                    familyMemberEmail = interest.familyMemberEmail
+                )
+            )
+        }
     }
 
     private fun findContactOrThrow(contactId: UUID): Contact {
@@ -1118,12 +1140,10 @@ class PatientService(
             LocalDateTime.ofInstant(it, ZoneOffset.UTC)
         } ?: LocalDateTime.now()
 
-        // Find any SCHEDULED enrollment contact for this patient
         val scheduledContact = contactRepository.findByPatientId(patient.id!!)
             .find { it.purpose == ContactPurpose.ENROLLMENT && it.status == ContactStatus.SCHEDULED }
 
         return if (scheduledContact != null) {
-            // Transition SCHEDULED → COMPLETED
             scheduledContact.status = ContactStatus.COMPLETED
             scheduledContact.completedAt = completedAt
             if (agent != null) scheduledContact.agent = agent
@@ -1131,7 +1151,6 @@ class PatientService(
             scheduledAt?.let { scheduledContact.scheduledAt = it }
             contactRepository.save(scheduledContact)
         } else {
-            // Create new COMPLETED contact
             val newContact = Contact(
                 patient = patient,
                 agent = agent,
@@ -1164,7 +1183,8 @@ class PatientService(
             consentToShareData = enrollmentData.informedConsentAccepted,
             affiliationType = enrollmentData.affiliationType,
             isOncologicalPatient = enrollmentData.isOncologicalPatient,
-            surveyAccepted = enrollmentData.surveyAccepted
+            surveyAccepted = enrollmentData.surveyAccepted,
+            wantsPsychooncologySupport = enrollmentData.wantsPsychooncologySupport
         )
         return enrollmentRepository.save(enrollment)
     }
@@ -1194,7 +1214,7 @@ class PatientService(
         return patientSymptomReportRepository.save(report)
     }
 
-    private fun buildPatientResponse(patient: Patient): PatientResponse {
+    private fun buildPatientResponse(patient: Patient, includeSummary: Boolean = false): PatientResponse {
         val patientId = patient.id!!
 
         val details = patientDetailsRepository.findByPatientId(patientId)
@@ -1204,9 +1224,14 @@ class PatientService(
         val medicalAppointments = patientMedicalAppointmentRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
         val sisAffiliations = patientSisAffiliationRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
         val companions = companionPatientRepository.findByPatientId(patientId)
+        val familyPreventionTalkInterests =
+            patientFamilyPreventionTalkInterestRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
         val contacts = contactRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
+        val contactServiceReferrals = contactServiceReferralRepository.findByContactIdIn(contacts.mapNotNull { it.id })
+            .associateBy { it.contact.id!! }
         val enrollments = enrollmentRepository.findByPatientId(patientId)
         val symptomReports = patientSymptomReportRepository.findByPatientIdOrderByCreatedAtDesc(patientId)
+        val summary = if (includeSummary) patientSummaryQueryService.getSummaryResponse(patient) else null
 
         return PatientResponse(
             id = patientId,
@@ -1228,10 +1253,18 @@ class PatientService(
             medicalAppointments = medicalAppointments.map { it.toResponse() },
             sisAffiliations = sisAffiliations.map { it.toResponse() },
             companions = companions.map { it.toCompanionResponse() },
-            contacts = contacts.map { it.toResponse() },
+            familyPreventionTalkInterests = familyPreventionTalkInterests.map { it.toResponse() },
+            contacts = contacts.map { contact ->
+                contact.toResponse(contact.id?.let(contactServiceReferrals::get))
+            },
             enrollments = enrollments.map { it.toResponse() },
-            symptomReports = symptomReports.map { it.toResponse() }
+            symptomReports = symptomReports.map { it.toResponse() },
+            summary = summary
         )
+    }
+
+    private fun markSummaryDirty(patient: Patient) {
+        patientSummaryDirtyMarker.markDirty(patient)
     }
 
 
@@ -1251,6 +1284,16 @@ class PatientService(
         educationLevel = educationLevel,
         nativeLanguage = nativeLanguage,
         requiresTranslation = requiresTranslation,
+        referredToSocialWorker = referredToSocialWorker,
+        evidenceOfDomesticViolence = evidenceOfDomesticViolence,
+        usesWoodStove = usesWoodStove,
+        isWorking = isWorking,
+        receivesFinancialSupport = receivesFinancialSupport,
+        programDropoutReason = programDropoutReason,
+        programDropoutDate = programDropoutDate,
+        hasConadisCard = hasConadisCard,
+        knowsAboutFissal = knowsAboutFissal,
+        isDeceased = isDeceased,
         createdAt = createdAt!!,
         updatedAt = updatedAt!!
     )
@@ -1357,6 +1400,7 @@ class PatientService(
         hasMobilityIssues = hasMobilityIssues,
         isOncologicalPatient = isOncologicalPatient,
         surveyAccepted = surveyAccepted,
+        wantsPsychooncologySupport = wantsPsychooncologySupport,
         createdAt = createdAt!!
     )
 
@@ -1385,7 +1429,7 @@ class PatientService(
         isPrimaryInformant = isPrimaryInformant
     )
 
-    private fun Contact.toResponse(): ContactResponse = ContactResponse(
+    private fun Contact.toResponse(serviceReferral: ContactServiceReferral?): ContactResponse = ContactResponse(
         id = id!!,
         agentName = agent?.fullName,
         type = type,
@@ -1394,8 +1438,38 @@ class PatientService(
         scheduledAt = scheduledAt,
         completedAt = completedAt,
         notes = notes,
+        serviceReferral = serviceReferral?.toResponse(),
         createdAt = createdAt!!
     )
+
+    private fun ContactServiceReferral.toResponse(): ContactServiceReferralResponse = ContactServiceReferralResponse(
+        id = id!!,
+        contactId = contact.id!!,
+        referredToSocialWorker = referredToSocialWorker,
+        referredToSusalud = referredToSusalud,
+        susaludRegistrationNumber = susaludRegistrationNumber,
+        receivedFoodGuide = receivedFoodGuide,
+        participatesInGam = participatesInGam,
+        programSatisfaction = programSatisfaction,
+        wellbeingChanges = wellbeingChanges,
+        knowsAboutFissal = knowsAboutFissal,
+        referredToPaus = referredToPaus,
+        referredToDae = referredToDae,
+        referredToFissal = referredToFissal,
+        createdAt = createdAt!!,
+        updatedAt = updatedAt!!
+    )
+
+    private fun PatientFamilyPreventionTalkInterest.toResponse(): FamilyPreventionTalkInterestResponse =
+        FamilyPreventionTalkInterestResponse(
+            id = id!!,
+            patientId = patient.id!!,
+            talkName = talkName,
+            familyMemberName = familyMemberName,
+            familyMemberPhone = familyMemberPhone,
+            familyMemberEmail = familyMemberEmail,
+            createdAt = createdAt!!
+        )
 
     private fun Contact.toSummary(): ContactSummary = ContactSummary(
         id = id!!,

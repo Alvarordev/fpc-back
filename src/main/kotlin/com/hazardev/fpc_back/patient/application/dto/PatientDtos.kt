@@ -1,6 +1,9 @@
 package com.hazardev.fpc_back.patient.application.dto
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.hazardev.fpc_back.contact.application.dto.ContactServiceReferralResponse
+import tools.jackson.databind.JsonNode
 import com.hazardev.fpc_back.shared.domain.AffiliationType
 import com.hazardev.fpc_back.shared.domain.CancerStage
 import com.hazardev.fpc_back.shared.domain.ContactPurpose
@@ -73,25 +76,20 @@ data class PatientResponse(
     val medicalAppointments: List<MedicalAppointmentResponse>,
     val sisAffiliations: List<SisAffiliationResponse>,
     val companions: List<CompanionResponse>,
+    val familyPreventionTalkInterests: List<FamilyPreventionTalkInterestResponse>,
     val contacts: List<ContactResponse>,
     val enrollments: List<EnrollmentMetadataResponse>,
-    val symptomReports: List<SymptomReportResponse>
+    val symptomReports: List<SymptomReportResponse>,
+    @field:JsonInclude(JsonInclude.Include.NON_NULL)
+    val summary: PatientSummaryResponse? = null
 )
 
-data class EnrollPatientRequest(
-    val birthDepartment: String? = null,
-    val currentAddress: String? = null,
-    val currentDistrict: String? = null,
-    val currentDepartment: String? = null,
-    val dniMatchesAddress: Boolean? = null,
-    val travelTimeToHospital: String? = null,
-    val emergencyContactName: String? = null,
-    val emergencyContactPhone: String? = null,
-    val zoneType: String? = null,
-    val emergencyContactGender: String? = null,
-    val educationLevel: EducationLevel? = null,
-    val nativeLanguage: String? = null,
-    val requiresTranslation: Boolean = false
+data class PatientSummaryResponse(
+    val status: String,
+    val stale: Boolean,
+    val updatedAt: LocalDateTime?,
+    val content: JsonNode?,
+    val lastErrorCode: String? = null
 )
 
 data class EnrollPatientDetailsRequest(
@@ -107,8 +105,19 @@ data class EnrollPatientDetailsRequest(
     val emergencyContactGender: String? = null,
     val educationLevel: EducationLevel? = null,
     val nativeLanguage: String? = null,
-    val requiresTranslation: Boolean = false
+    val requiresTranslation: Boolean = false,
+    val referredToSocialWorker: Boolean? = null,
+    val evidenceOfDomesticViolence: Boolean? = null,
+    val usesWoodStove: Boolean? = null,
+    val isWorking: Boolean? = null,
+    val receivesFinancialSupport: Boolean? = null,
+    val programDropoutReason: String? = null,
+    val programDropoutDate: LocalDate? = null,
+    val hasConadisCard: Boolean? = null,
+    val knowsAboutFissal: Boolean? = null,
+    val isDeceased: Boolean? = null
 )
+
 
 data class UpdatePatientDetailsRequest(
     val birthDepartment: String? = null,
@@ -123,7 +132,17 @@ data class UpdatePatientDetailsRequest(
     val emergencyContactGender: String? = null,
     val educationLevel: EducationLevel? = null,
     val nativeLanguage: String? = null,
-    val requiresTranslation: Boolean? = null
+    val requiresTranslation: Boolean? = null,
+    val referredToSocialWorker: Boolean? = null,
+    val evidenceOfDomesticViolence: Boolean? = null,
+    val usesWoodStove: Boolean? = null,
+    val isWorking: Boolean? = null,
+    val receivesFinancialSupport: Boolean? = null,
+    val programDropoutReason: String? = null,
+    val programDropoutDate: LocalDate? = null,
+    val hasConadisCard: Boolean? = null,
+    val knowsAboutFissal: Boolean? = null,
+    val isDeceased: Boolean? = null
 )
 
 data class PatientDetailsResponse(
@@ -142,6 +161,16 @@ data class PatientDetailsResponse(
     val educationLevel: EducationLevel?,
     val nativeLanguage: String?,
     val requiresTranslation: Boolean,
+    val referredToSocialWorker: Boolean?,
+    val evidenceOfDomesticViolence: Boolean?,
+    val usesWoodStove: Boolean?,
+    val isWorking: Boolean?,
+    val receivesFinancialSupport: Boolean?,
+    val programDropoutReason: String?,
+    val programDropoutDate: LocalDate?,
+    val hasConadisCard: Boolean?,
+    val knowsAboutFissal: Boolean?,
+    val isDeceased: Boolean?,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime
 )
@@ -325,6 +354,7 @@ data class ContactResponse(
     val scheduledAt: LocalDateTime?,
     val completedAt: LocalDateTime?,
     val notes: String?,
+    val serviceReferral: ContactServiceReferralResponse?,
     val createdAt: LocalDateTime
 )
 
@@ -338,10 +368,35 @@ data class FullEnrollmentRequest(
     val medicalAppointments: List<AddMedicalAppointmentRequest>?,
     val sisAffiliation: AddSisAffiliationRequest?,
     val companions: List<LinkCompanionRequest>?,
+    val familyPreventionTalkInterests: List<FamilyPreventionTalkInterestRequest>? = null,
     val enrollmentMetadata: EnrollmentMetadataRequest? = null,
     val symptomReport: SymptomReportRequest? = null
 )
 
+data class FamilyPreventionTalkInterestRequest(
+    val talkName: String,
+    val familyMemberName: String,
+    val familyMemberPhone: String,
+    val familyMemberEmail: String
+)
+
+data class FamilyPreventionTalkInterestResponse(
+    val id: UUID,
+    val patientId: UUID,
+    val talkName: String,
+    val familyMemberName: String,
+    val familyMemberPhone: String,
+    val familyMemberEmail: String,
+    val createdAt: LocalDateTime
+)
+
+/**
+ * Request DTO for enrollment wizard metadata.
+ *
+ * Fields like [caseComments], [startTime], [endTime], and [agentId] are used
+ * for the enrollment Contact lifecycle. The remaining fields map to the
+ * [com.hazardev.fpc_back.patient.domain.Enrollment] entity.
+ */
 data class EnrollmentMetadataRequest(
     val caseComments: String? = null,
     val startTime: Instant? = null,
@@ -354,6 +409,7 @@ data class EnrollmentMetadataRequest(
     val currentlyAttendingConsultations: Boolean? = null,
     val currentlyReceivingTreatment: Boolean? = null,
     val surveyAccepted: Boolean = false,
+    val wantsPsychooncologySupport: Boolean? = null,
     val agentId: UUID? = null
 )
 
@@ -374,6 +430,7 @@ data class EnrollmentMetadataResponse(
     val hasMobilityIssues: Boolean?,
     val isOncologicalPatient: Boolean,
     val surveyAccepted: Boolean,
+    val wantsPsychooncologySupport: Boolean?,
     val createdAt: LocalDateTime
 )
 

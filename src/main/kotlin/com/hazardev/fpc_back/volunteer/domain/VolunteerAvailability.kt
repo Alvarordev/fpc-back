@@ -19,12 +19,6 @@ import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.UUID
 
-/**
- * Individual 1-hour availability slot for a volunteer.
- * The frontend splits date ranges into individual hour slots before sending.
- *
- * Unique constraint on (volunteer_id, date, start_time) prevents duplicate slots.
- */
 @Entity
 @Table(
     name = "volunteer_availability",

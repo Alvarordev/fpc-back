@@ -81,6 +81,7 @@ class AlertService(
         )
     }
 
+
     @Transactional
     fun createAlert(request: CreateAlertRequest): AlertResponse {
         val healthCenter = healthCenterRepository.findById(request.healthCenterId)

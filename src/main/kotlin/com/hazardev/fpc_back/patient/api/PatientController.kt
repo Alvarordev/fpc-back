@@ -1,6 +1,8 @@
 package com.hazardev.fpc_back.patient.api
 
 import com.hazardev.fpc_back.patient.application.PatientService
+import com.hazardev.fpc_back.patient.application.PatientSummaryOnDemandService
+import com.hazardev.fpc_back.patient.application.dto.PatientSummaryOnDemandResponse
 import com.hazardev.fpc_back.patient.application.dto.AddDiagnosisRequest
 import com.hazardev.fpc_back.patient.application.dto.AddInsuranceRequest
 import com.hazardev.fpc_back.patient.application.dto.AddMedicalAppointmentRequest
@@ -11,7 +13,6 @@ import com.hazardev.fpc_back.patient.application.dto.CompanionResponse
 import com.hazardev.fpc_back.patient.application.dto.ContactResponse
 import com.hazardev.fpc_back.patient.application.dto.CreatePatientRequest
 import com.hazardev.fpc_back.patient.application.dto.DiagnosisRecordResponse
-import com.hazardev.fpc_back.patient.application.dto.EnrollPatientRequest
 import com.hazardev.fpc_back.patient.application.dto.FullEnrollmentRequest
 import com.hazardev.fpc_back.patient.application.dto.InsuranceRecordResponse
 import com.hazardev.fpc_back.patient.application.dto.LinkCompanionRequest
@@ -37,17 +38,11 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import java.util.UUID
 
-/**
- * REST controller for Patient management.
- *
- * Exposes the full [PatientService] API via REST endpoints under `/api/patients`.
- * Handles patient CRUD, enrollment, insurance, diagnoses, treatments,
- * medical appointments, SIS affiliations, companions, and contact history.
- */
 @RestController
 @RequestMapping("/api/patients")
 class PatientController(
-    private val patientService: PatientService
+    private val patientService: PatientService,
+    private val patientSummaryOnDemandService: PatientSummaryOnDemandService
 ) {
 
     @GetMapping
@@ -97,15 +92,6 @@ class PatientController(
         @Valid @RequestBody request: FullEnrollmentRequest
     ): ResponseEntity<PatientResponse> {
         val response = patientService.fullEnrollment(request)
-        return ResponseEntity.status(HttpStatus.CREATED).body(response)
-    }
-
-    @PostMapping("/{id}/enroll")
-    fun enrollPatient(
-        @PathVariable id: UUID,
-        @RequestBody request: EnrollPatientRequest
-    ): ResponseEntity<PatientResponse> {
-        val response = patientService.enrollPatient(id, request)
         return ResponseEntity.status(HttpStatus.CREATED).body(response)
     }
 
@@ -230,5 +216,11 @@ class PatientController(
     @GetMapping("/{id}/contacts")
     fun getContactHistory(@PathVariable id: UUID): List<ContactResponse> {
         return patientService.getContactHistory(id)
+    }
+
+    @GetMapping("/dni/{dni}/summary")
+    fun getPatientSummaryByDni(@PathVariable dni: String): ResponseEntity<PatientSummaryOnDemandResponse> {
+        val result = patientSummaryOnDemandService.generateByDni(dni)
+        return ResponseEntity.status(result.httpStatus).body(result.body)
     }
 }

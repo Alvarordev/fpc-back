@@ -18,9 +18,13 @@ class JwtAuthenticationFilter(
         filterChain: FilterChain
     ) {
         val token = resolveToken(request)
-        if (token != null && jwtTokenProvider.validateToken(token)) {
-            val authentication = jwtTokenProvider.getAuthentication(token)
-            SecurityContextHolder.getContext().authentication = authentication
+        if (token != null && jwtTokenProvider.validateToken(token) && jwtTokenProvider.isAccessToken(token)) {
+            try {
+                val authentication = jwtTokenProvider.getAuthentication(token)
+                SecurityContextHolder.getContext().authentication = authentication
+            } catch (_: IllegalArgumentException) {
+                SecurityContextHolder.clearContext()
+            }
         }
         filterChain.doFilter(request, response)
     }

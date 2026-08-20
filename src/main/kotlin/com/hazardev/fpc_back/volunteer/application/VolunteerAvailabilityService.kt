@@ -14,34 +14,12 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.util.UUID
 
-/**
- * Manages volunteer availability slots.
- *
- * Each slot represents a 1-hour block that can be reserved for appointments.
- * The frontend is expected to split date ranges into individual 1-hour slots
- * before sending creation requests.
- *
- * Concurrency safety for slot reservation uses pessimistic locking
- * (SELECT ... FOR UPDATE) to prevent double-booking race conditions.
- */
 @Service
 class VolunteerAvailabilityService(
     private val availabilityRepository: VolunteerAvailabilityRepository,
     private val volunteerRepository: VolunteerRepository
 ) {
 
-    /**
-     * Create a new availability slot for a volunteer.
-     *
-     * Validates that no duplicate slot exists (same volunteer, date, and start time).
-     * The unique database constraint acts as a safety net, but the service-layer
-     * check provides a clear error message before the database rejects it.
-     *
-     * @param request containing volunteerId, date, startTime, and endTime
-     * @return the created availability slot as a response DTO
-     * @throws EntityNotFoundException if the volunteer does not exist
-     * @throws IllegalStateException if a duplicate slot already exists
-     */
     @Transactional
     fun createSlot(request: CreateSlotRequest): AvailabilitySlotResponse {
         val volunteer = volunteerRepository.findById(request.volunteerId)
@@ -83,17 +61,6 @@ class VolunteerAvailabilityService(
             .map { it.toResponse() }
     }
 
-    /**
-     * Reserve an availability slot by changing its status from AVAILABLE to RESERVED.
-     *
-     * Uses a pessimistic write lock (SELECT ... FOR UPDATE) to prevent race conditions
-     * where two threads/appointments attempt to reserve the same slot simultaneously.
-     *
-     * @param slotId the availability slot ID to reserve
-     * @return the reserved slot as a response DTO
-     * @throws EntityNotFoundException if the slot does not exist
-     * @throws IllegalStateException if the slot is not currently AVAILABLE
-     */
     @Transactional
     fun reserveSlot(slotId: UUID): AvailabilitySlotResponse {
         val slot = availabilityRepository.findByIdWithLock(slotId)

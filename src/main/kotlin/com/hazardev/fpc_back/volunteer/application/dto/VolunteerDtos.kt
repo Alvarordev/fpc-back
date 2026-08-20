@@ -45,11 +45,6 @@ data class UpdateSlotRequest(
     val status: AvailabilityStatus? = null
 )
 
-/**
- * Request to create a new availability slot for a volunteer.
- * The frontend is expected to split date ranges into individual 1-hour slots
- * before sending.
- */
 data class CreateSlotRequest(
     val volunteerId: UUID,
     val date: LocalDate,
